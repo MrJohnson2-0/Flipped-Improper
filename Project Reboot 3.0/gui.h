@@ -650,20 +650,206 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 		if (!WorldInventory)
 			continue;
 
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dist(0, 7);
+		//Yes I know this is Skunked But I can't think Today.
+		UFortItemDefinition* Ar = nullptr;
+		UFortItemDefinition* Shotgun = nullptr;
+		UFortItemDefinition* Sniper = nullptr;
+		UFortItemDefinition* Shields = nullptr;
+		UFortItemDefinition* Other = nullptr;
+		UFortItemDefinition* TrapPlaced = nullptr;
+
+		int randomIndex = dist(gen);
+		switch (randomIndex)
+		{
+		case 0:
+			Ar = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/RedDotAR/WID_Assault_RedDotAR_Athena_SR.WID_Assault_RedDotAR_Athena_SR");
+			break;
+		case 1:
+			Ar = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/CoreAR/WID_Assault_CoreAR_Athena_UC.WID_Assault_CoreAR_Athena_UC");
+			break;
+		case 2:
+			Ar = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/RedDotAR/WID_Assault_RedDotAR_Athena_VR.WID_Assault_RedDotAR_Athena_VR");
+			break;
+		case 3:
+			Ar = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Assault_AutoHigh_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03");
+			break;
+		case 4:
+			Ar = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Assault_AutoHigh_Athena_SR_Ore_T03.WID_Assault_AutoHigh_Athena_SR_Ore_T03");
+			break;
+		case 5:
+			Ar = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Assault_AutoHigh_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03");
+			break;
+		case 6:
+			Ar = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/CoreAR/WID_Assault_CoreAR_Athena_C.WID_Assault_CoreAR_Athena_C");
+			break;
+		case 7:
+			Ar = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/RedDotAR/WID_Assault_RedDotAR_Athena_UR.WID_Assault_RedDotAR_Athena_UR");
+			break;
+		default:
+			break;
+		}
+
+		randomIndex = dist(gen); // Changed variable name to avoid redeclaration
+		switch (randomIndex)
+		{
+		case 0:
+			Shotgun = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_SR.WID_Shotgun_CoreBurst_Athena_SR");
+			break;
+		case 1:
+			Shotgun = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_UC.WID_Shotgun_CoreBurst_Athena_UC");
+			break;
+		case 2:
+			Shotgun = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/DPSShotgun/WID_Shotgun_CoreDPS_Athena_SR.WID_Shotgun_CoreDPS_Athena_SR");
+			break;
+		case 3:
+			Shotgun = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/DPSShotgun/WID_Shotgun_CoreDPS_Athena_UC.WID_Shotgun_CoreDPS_Athena_UC");
+			break;
+		case 4:
+			Shotgun = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_SlugFire_Athena_VR.WID_Shotgun_SlugFire_Athena_VR");
+			break;
+		case 5:
+			Shotgun = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_UC.WID_Shotgun_CoreBurst_Athena_UC");
+			break;
+		case 6:
+			Shotgun = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03");
+			break;
+		case 7:
+			Shotgun = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_Standard_Athena_C_Ore_T03.WID_Shotgun_Standard_Athena_C_Ore_T03");
+			break;
+		default:
+			break;
+		}
+
+		randomIndex = dist(gen);
+		switch (randomIndex)
+		{
+		case 0:
+			Sniper = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Sniper_NoScope_Athena_R_Ore_T03.WID_Sniper_NoScope_Athena_R_Ore_T03");
+			break;
+		case 1:
+			Sniper = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Sniper_Heavy_Athena_VR_Ore_T03.WID_Sniper_Heavy_Athena_VR_Ore_T03");
+			break;
+		case 2:
+			Sniper = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/CoreSMG/WID_SMG_CoreSMG_Athena_VR.WID_SMG_CoreSMG_Athena_VR");
+			break;
+		case 3:
+			Sniper = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03");
+			break;
+		case 4:
+			Sniper = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/CoreSniper/WID_Sniper_CoreSniper_Athena_R.WID_Sniper_CoreSniper_Athena_R");
+			break;
+		case 5:
+			Sniper = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/CoreSMG/WID_SMG_CoreSMG_Athena_UC.WID_SMG_CoreSMG_Athena_UC");
+			break;
+		case 6:
+			Sniper = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/CoreSMG/WID_SMG_CoreSMG_Athena_UR_IOBrute.WID_SMG_CoreSMG_Athena_UR_IOBrute");
+			break;
+		case 7:
+			Sniper = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Sniper_Standard_Scope_Athena_SR_Ore_T03.WID_Sniper_Standard_Scope_Athena_SR_Ore_T03");
+			break;
+		default:
+			break;
+		}
+
+		randomIndex = dist(gen);
+		switch (randomIndex)
+		{
+		case 0:
+			Shields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/ShieldSmall/Athena_ShieldSmall.Athena_ShieldSmall");
+			break;
+		case 1:
+			Shields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/ShockwaveGrenade/Athena_ShockGrenade.Athena_ShockGrenade");
+			break;
+		case 2:
+			Shields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/StickyGrenade/Athena_StickyGrenade.Athena_StickyGrenade");
+			break;
+		case 3:
+			Shields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/GasGrenade/Athena_GasGrenade.Athena_GasGrenade");
+			break;
+		case 4:
+			Shields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/SuperTowerGrenade/Levels/GiftBox/HolidayGiftBox/Athena_HolidayGiftBox.Athena_HolidayGiftBox");
+			break;
+		case 5:
+			Shields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/ShieldSmall/Athena_ShieldSmall.Athena_ShieldSmall");
+			break;
+		case 6:
+			Shields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/Grenade/Athena_Grenade.Athena_Grenade");
+			break;
+		case 7:
+			Shields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/ShieldSmall/Athena_ShieldSmall.Athena_ShieldSmall");
+			break;
+		default:
+			break;
+		}
+
+		randomIndex = dist(gen);
+		switch (randomIndex)
+		{
+		case 0:
+			Other = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Hook_Gun_VR_Ore_T03.WID_Hook_Gun_VR_Ore_T03");
+			break;
+		case 1:
+			Other = FindObject<UFortItemDefinition>(L"");
+			break;
+		case 2:
+			Other = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WaffleTruck/WID_WaffleTruck_ChillerLauncher.WID_WaffleTruck_ChillerLauncher");
+			break;
+		case 3:
+			Other = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/ChillBronco/Athena_ChillBronco_NPC.Athena_ChillBronco_NPC");
+			break;
+		case 4:
+			Other = FindObject<UFortItemDefinition>(L"/ParallelGameplay/Items/WestSausage/WID_WestSausage_Parallel_L_M.WID_WestSausage_Parallel_L_M");
+			break;
+		case 5:
+			Other = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Gameplay/Lotus/Mustache/AGID_Lotus_Mustache.AGID_Lotus_Mustache");
+			break;
+		case 6:
+			Other = FindObject<UFortItemDefinition>(L"/CorruptionGameplay/Gameplay/Items/Consumables/SpicySoda/WID_Athena_SpicySoda.WID_Athena_SpicySoda");
+			break;
+		case 7:
+			Other = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Hook_Gun_VR_Ore_T03.WID_Hook_Gun_VR_Ore_T03");
+			break;
+		default:
+			break;
+		}
+
+		randomIndex = dist(gen);
+		switch (randomIndex)
+		{
+		case 0:
+			TrapPlaced = FindObject<UFortItemDefinition>(L"");
+			break;
+		case 1:
+			TrapPlaced = FindObject<UFortItemDefinition>(L"");
+			break;
+		case 2:
+			TrapPlaced = FindObject<UFortItemDefinition>(L"");
+			break;
+		case 3:
+			TrapPlaced = FindObject<UFortItemDefinition>(L"");
+			break;
+		case 4:
+			TrapPlaced = FindObject<UFortItemDefinition>(L"");
+			break;
+		case 5:
+			TrapPlaced = FindObject<UFortItemDefinition>(L"");
+			break;
+		case 6:
+			TrapPlaced = FindObject<UFortItemDefinition>(L"");
+			break;
+		case 7:
+			TrapPlaced = FindObject<UFortItemDefinition>(L"");
+			break;
+		default:
+			break;
+		}
+
 		static auto WoodItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/WoodItemData.WoodItemData");
 		static auto StoneItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/StoneItemData.StoneItemData");
 		static auto MetalItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/MetalItemData.MetalItemData");
-
-		static auto Rifle = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Assault_AutoHigh_Athena_SR_Ore_T03.WID_Assault_AutoHigh_Athena_SR_Ore_T03");
-		static auto Shotgun = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_Standard_Athena_SR_Ore_T03.WID_Shotgun_Standard_Athena_SR_Ore_T03")
-			? FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_Standard_Athena_SR_Ore_T03.WID_Shotgun_Standard_Athena_SR_Ore_T03")
-			: FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_Standard_Athena_C_Ore_T03.WID_Shotgun_Standard_Athena_C_Ore_T03");
-		static auto SMG = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Pistol_AutoHeavyPDW_Athena_R_Ore_T03.WID_Pistol_AutoHeavyPDW_Athena_R_Ore_T03")
-			? FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Pistol_AutoHeavyPDW_Athena_R_Ore_T03.WID_Pistol_AutoHeavyPDW_Athena_R_Ore_T03")
-			: FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Pistol_AutoHeavySuppressed_Athena_R_Ore_T03.WID_Pistol_AutoHeavySuppressed_Athena_R_Ore_T03");
-
-		static auto MiniShields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/ShieldSmall/Athena_ShieldSmall.Athena_ShieldSmall");
-
 		static auto Shells = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataShells.AthenaAmmoDataShells");
 		static auto Medium = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataBulletsMedium.AthenaAmmoDataBulletsMedium");
 		static auto Light = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataBulletsLight.AthenaAmmoDataBulletsLight");
@@ -672,10 +858,12 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 		WorldInventory->AddItem(WoodItemData, nullptr, 500);
 		WorldInventory->AddItem(StoneItemData, nullptr, 500);
 		WorldInventory->AddItem(MetalItemData, nullptr, 500);
-		WorldInventory->AddItem(Rifle, nullptr, 1);
 		WorldInventory->AddItem(Shotgun, nullptr, 1);
-		WorldInventory->AddItem(SMG, nullptr, 1);
-		WorldInventory->AddItem(MiniShields, nullptr, 6);
+		WorldInventory->AddItem(Sniper, nullptr, 1);
+		WorldInventory->AddItem(Ar, nullptr, 1);
+		WorldInventory->AddItem(Other, nullptr, 1);
+		WorldInventory->AddItem(Shields, nullptr, 6);
+		WorldInventory->AddItem(TrapPlaced, nullptr, 3);
 		WorldInventory->AddItem(Shells, nullptr, 999);
 		WorldInventory->AddItem(Medium, nullptr, 999);
 		WorldInventory->AddItem(Light, nullptr, 999);

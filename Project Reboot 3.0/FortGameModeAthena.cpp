@@ -1108,9 +1108,21 @@ int AFortGameModeAthena::Athena_PickTeamHook(AFortGameModeAthena* GameMode, uint
 	return NextTeamIndex;
 }
 
+void DelayedAction()
+{
+	// Delay for 15 seconds
+	std::this_thread::sleep_for(std::chrono::seconds(5));
+
+	// After the delay, perform the desired action
+	if (Globals::bLateGame.load())
+	{
+		CreateThread(0, 0, LateGameThread, 0, 0, 0);
+	}
+}
+
 void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena* GameMode, AActor* NewPlayerActor)
 {
-	if (NewPlayerActor == GetLocalPlayerController()) // we dont really need this but it also functions as a nullptr check usually
+	if (NewPlayerActor == GetLocalPlayerController()) // we don't really need this, but it also functions as a nullptr check usually
 		return;
 
 	auto GameState = GameMode->GetGameStateAthena();
@@ -1120,6 +1132,14 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 
 	LOG_INFO(LogPlayer, "HandleStartingNewPlayer!");
 
+	if (Fortnite_Version == 19.10)
+	{
+		Helper::SetSnowIndex(0);
+
+		LOG_INFO(LogSnow, "Snow Value is 0(Meaning Full Snow Map)")
+	}
+
+
 	if (Globals::bAutoRestart)
 	{
 		static int LastNum123 = 15;
@@ -1128,23 +1148,13 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 		{
 			LastNum123 = Globals::AmountOfListens;
 
-			float Duration = AutoBusStartSeconds;
-			float EarlyDuration = Duration;
+			// Start a separate thread for the delayed action
+			std::thread delayThread(DelayedAction);
 
-			float TimeSeconds = UGameplayStatics::GetTimeSeconds(GetWorld());
+			// Detach the thread so it runs independently
+			delayThread.detach();
 
-			static auto WarmupCountdownEndTimeOffset = GameState->GetOffset("WarmupCountdownEndTime");
-			static auto WarmupCountdownStartTimeOffset = GameState->GetOffset("WarmupCountdownStartTime");
-			static auto WarmupCountdownDurationOffset = GameMode->GetOffset("WarmupCountdownDuration");
-			static auto WarmupEarlyCountdownDurationOffset = GameMode->GetOffset("WarmupEarlyCountdownDuration");
-
-			GameState->Get<float>(WarmupCountdownEndTimeOffset) = TimeSeconds + Duration;
-			GameMode->Get<float>(WarmupCountdownDurationOffset) = Duration;
-
-			GameState->Get<float>(WarmupCountdownStartTimeOffset) = TimeSeconds;
-			GameMode->Get<float>(WarmupEarlyCountdownDurationOffset) = EarlyDuration;
-
-			LOG_INFO(LogDev, "Auto starting bus in {}.", AutoBusStartSeconds);
+			// Continue with other code as needed
 		}
 	}
 
