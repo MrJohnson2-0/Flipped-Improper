@@ -1111,7 +1111,7 @@ int AFortGameModeAthena::Athena_PickTeamHook(AFortGameModeAthena* GameMode, uint
 void DelayedAction()
 {
 	// Delay for 15 seconds
-	std::this_thread::sleep_for(std::chrono::seconds(5));
+	std::this_thread::sleep_for(std::chrono::seconds(45));
 
 	// After the delay, perform the desired action
 	if (Globals::bLateGame.load())
@@ -1132,12 +1132,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 
 	LOG_INFO(LogPlayer, "HandleStartingNewPlayer!");
 
-	if (Fortnite_Version == 19.10)
-	{
-		Helper::SetSnowIndex(0);
-
-		LOG_INFO(LogSnow, "Snow Value is 0(Meaning Full Snow Map)")
-	}
+	
 
 
 	if (Globals::bAutoRestart)
