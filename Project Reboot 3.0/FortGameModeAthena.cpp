@@ -1108,6 +1108,8 @@ int AFortGameModeAthena::Athena_PickTeamHook(AFortGameModeAthena* GameMode, uint
 	return NextTeamIndex;
 }
 
+float Shit = AutoBusStartSeconds;
+
 void DelayedAction()
 {
 	// Delay for 15 seconds
