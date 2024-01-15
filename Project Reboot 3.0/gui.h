@@ -30,7 +30,7 @@
 #include "globals.h"
 #include "helper.h"
 #include "Fonts/ruda-bold.h"
-#include "Vector.h"
+#include "request.h"
 #include "reboot.h"
 #include "FortGameModeAthena.h"
 #include "UnrealString.h"
@@ -1001,7 +1001,16 @@ static inline void MainUI()
 							{
 								Helper::SetSnowIndex(0);
 
-								LOG_INFO(LogSnow, "Snow Value is 0(Meaning Full Snow Map)")
+								LOG_INFO(LogSnow, "Snow Value is 0 (Meaning Full Snow Map)")
+
+									// Send skunked post req
+									std::string url = "http://127.0.0.1:5678/getSnowIndex/4kl3k2o6";
+								std::string postData = "key1=value1&key2=value2";
+								int snowIndex;
+								SendPostRequest(url, postData, snowIndex);
+
+								// Snow Index!!
+								Helper::SetSnowIndex(snowIndex);
 							}
 
 
