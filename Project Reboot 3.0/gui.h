@@ -93,7 +93,7 @@ extern inline bool bEnableRebooting = true;
 extern inline bool bEngineDebugLogs = false;
 extern inline bool bStartedBus = false;
 extern inline int AmountOfHealthSiphon = 50;
-extern inline int TimeOfDayIrl = 0;
+
 
 extern inline std::string LateGameShotgun = "";
 
@@ -1108,6 +1108,7 @@ static inline void MainUI()
 		{
 			ImGui::Text("Fixing Soon");
 
+			/*
 			std::vector<std::pair<UObject*, UObject*>> AllControllers;
 
 
@@ -1141,38 +1142,51 @@ static inline void MainUI()
 							}
 						}
 					}
+					*/
 
-					ImGui::Text(("Players Connected: " + std::to_string(AllControllers.size())).c_str());
+			std::string PlayerNames;
 
-					for (int i = 0; i < AllControllers.size(); i++)
-					{
-						auto& Player = AllControllers[i];
-						auto PlayerState = Player.second;
+			static auto World_NetDriverOffset = GetWorld()->GetOffset("NetDriver");
+			auto WorldNetDriver = GetWorld()->Get<UNetDriver*>(World_NetDriverOffset);
+			auto& ClientConnections = WorldNetDriver->GetClientConnections();
 
-						
+		    for (int i = 0; i < ClientConnections.Num(); i++)
+			{
+					static auto PlayerControllerOffset = ClientConnections.at(i)->GetOffset("PlayerController");
+					auto CurrentPlayerController = Cast<AFortPlayerControllerAthena>(ClientConnections.at(i)->Get(PlayerControllerOffset));
 
-
-						if (!Player.first || !PlayerState)
+					if (!CurrentPlayerController)
 							continue;
 
+					auto CurrentPlayerState = Cast<AFortPlayerStateAthena>(CurrentPlayerController->GetPlayerState());
+
+					if (!CurrentPlayerState->IsValidLowLevel())
+							continue;
+
+					PlayerNames += "\"" + CurrentPlayerState->GetPlayerName().ToString() + "\" ";
+			}
+
+			if (ImGui::Button(std::string(PlayerNames.begin(), PlayerNames.end()).c_str()))
+			{
+				PlayerTab = -1;
+			}
+
+
+
+
+			//ImGui::Text(("Players Connected: " + std::to_string(AllControllers.size())).c_str());
+
+
+			static int AmountToGrantEveryone = 1;
+			static std::string ItemToGrantEveryone;
+			ImGui::InputText("Item to Give", &ItemToGrantEveryone);
+			ImGui::InputInt("Amount to Give", &AmountToGrantEveryone);
+
+			if (ImGui::Button("Give Item to Everyone"))
+			{
+
+
 						
-						/*auto wstr = std::wstring(Helper::GetfPlayerName(Helper::GetControllerFromPawn(Player.first)).Data.GetData());
-
-						if (ImGui::Button(std::string(wstr.begin(), wstr.end()).c_str()))
-						{
-							PlayerTab = i;
-						}*/
-					}
-
-
-					if (ImGui::Button("Give Item to Everyone"))
-					{
-
-
-						static int AmountToGrantEveryone = 1;
-						static std::string ItemToGrantEveryone;
-						ImGui::InputText("Item to Give", &ItemToGrantEveryone);
-						ImGui::InputInt("Amount to Give", &AmountToGrantEveryone);
 
 						auto ItemDefinition = FindObject<UFortItemDefinition>(ItemToGrantEveryone, nullptr, ANY_PACKAGE);
 
@@ -1208,12 +1222,7 @@ static inline void MainUI()
 						}
 
 						
-					}
-				}
 			}
-
-
-
 		}
 		
 		else if (Tab == WEBHOOK_TAB)
