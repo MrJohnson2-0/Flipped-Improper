@@ -49,7 +49,7 @@ UClass* AGameModeBase::GetDefaultPawnClassForController(AController* InControlle
 	{
 		AController* InController;                                             // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 		UClass* ReturnValue;                                              // (Parm, OutParm, ZeroConstructor, ReturnParm, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	} AGameModeBase_GetDefaultPawnClassForController_Params{InController};
+	} AGameModeBase_GetDefaultPawnClassForController_Params{ InController };
 
 	this->ProcessEvent(GetDefaultPawnClassForControllerFn, &AGameModeBase_GetDefaultPawnClassForController_Params);
 
@@ -82,7 +82,7 @@ AActor* AGameModeBase::K2_FindPlayerStart(AController* Player, FString IncomingN
 	} AGameModeBase_K2_FindPlayerStart_Params{ Player, IncomingName };
 
 	this->ProcessEvent(K2_FindPlayerStartFn, &AGameModeBase_K2_FindPlayerStart_Params);
-	
+
 	return AGameModeBase_K2_FindPlayerStart_Params.ReturnValue;
 }
 
@@ -159,7 +159,20 @@ APawn* AGameModeBase::SpawnDefaultPawnForHook(AGameModeBase* GameMode, AControll
 
 				auto& StartingItems = ((AFortGameModeAthena*)GameMode)->GetStartingItems();
 
-				NewPlayerAsAthena->AddPickaxeToInventory();
+				if (Globals::bGoingToPlayEvent && Fortnite_Version >= 16.00)
+				{
+					auto WID = Cast<UFortWorldItemDefinition>(FindObject("WID_EventMode_Activator", nullptr, ANY_PACKAGE)); // Empty Hands
+
+					bool bShouldUpdate = false;
+					WorldInventory->AddItem(WID, &bShouldUpdate, 1);
+
+					if (bShouldUpdate)
+						WorldInventory->Update();
+				}
+				else
+				{
+					NewPlayerAsAthena->AddPickaxeToInventory();
+				}
 
 				for (int i = 0; i < StartingItems.Num(); ++i)
 				{
@@ -184,24 +197,24 @@ APawn* AGameModeBase::SpawnDefaultPawnForHook(AGameModeBase* GameMode, AControll
 				} */
 
 				auto AddInventoryOverrideTeamLoadouts = [&](AFortAthenaMutator* Mutator)
-				{
-					if (auto InventoryOverride = Cast<AFortAthenaMutator_InventoryOverride>(Mutator))
 					{
-						auto TeamIndex = PlayerStateAthena->GetTeamIndex();
-						auto LoadoutTeam = InventoryOverride->GetLoadoutTeamForTeamIndex(TeamIndex);
-
-						if (LoadoutTeam.UpdateOverrideType == EAthenaInventorySpawnOverride::Always)
+						if (auto InventoryOverride = Cast<AFortAthenaMutator_InventoryOverride>(Mutator))
 						{
-							auto LoadoutContainer = InventoryOverride->GetLoadoutContainerForTeamIndex(TeamIndex);
+							auto TeamIndex = PlayerStateAthena->GetTeamIndex();
+							auto LoadoutTeam = InventoryOverride->GetLoadoutTeamForTeamIndex(TeamIndex);
 
-							for (int i = 0; i < LoadoutContainer.Loadout.Num(); ++i)
+							if (LoadoutTeam.UpdateOverrideType == EAthenaInventorySpawnOverride::Always)
 							{
-								auto& ItemAndCount = LoadoutContainer.Loadout.at(i);
-								WorldInventory->AddItem(ItemAndCount.GetItem(), nullptr, ItemAndCount.GetCount());
+								auto LoadoutContainer = InventoryOverride->GetLoadoutContainerForTeamIndex(TeamIndex);
+
+								for (int i = 0; i < LoadoutContainer.Loadout.Num(); ++i)
+								{
+									auto& ItemAndCount = LoadoutContainer.Loadout.at(i);
+									WorldInventory->AddItem(ItemAndCount.GetItem(), nullptr, ItemAndCount.GetCount());
+								}
 							}
 						}
-					}
-				};
+					};
 
 				LoopMutators(AddInventoryOverrideTeamLoadouts);
 			}
@@ -261,9 +274,9 @@ APawn* AGameModeBase::SpawnDefaultPawnForHook(AGameModeBase* GameMode, AControll
 		// NewPlayerAsAthena->RespawnPlayerAfterDeath(true);
 	}
 
-        static bool bFirst = true;
+	static bool bFirst = true;
 
-	if (bFirst)
+	if (bFirst && Calendar::HasSnowModification())
 	{
 		bFirst = false;
 		Calendar::SetSnow(100);

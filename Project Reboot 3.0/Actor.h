@@ -48,6 +48,7 @@ public:
 	void ForceNetUpdate();
 	bool IsNetStartupActor();
 	bool IsPendingKillPending();
+	UObject* AddComponentByClass(UClass* Class);
 	float& GetNetUpdateFrequency();
 	float& GetMinNetUpdateFrequency();
 	const AActor* GetNetOwner() const;
@@ -60,7 +61,7 @@ public:
 		// return (ActorOwner == this);
 
 		static auto IsRelevancyOwnerForOffset = 0x428;
-		bool (*IsRelevancyOwnerForOriginal)(const AActor* Actor, const AActor * ReplicatedActor, const AActor * ActorOwner, const AActor * ConnectionActor) =
+		bool (*IsRelevancyOwnerForOriginal)(const AActor * Actor, const AActor * ReplicatedActor, const AActor * ActorOwner, const AActor * ConnectionActor) =
 			decltype(IsRelevancyOwnerForOriginal)(this->VFTable[IsRelevancyOwnerForOffset / 8]);
 
 		return IsRelevancyOwnerForOriginal(this, ReplicatedActor, ActorOwner, ConnectionActor);

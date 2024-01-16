@@ -21,7 +21,7 @@ struct Event
 	bool RequiredPlaylist = true;
 };
 
-static inline std::vector<Event> Events = 
+static inline std::vector<Event> Events =
 {
 	Event
 	(
@@ -160,7 +160,7 @@ static inline std::vector<Event> Events =
 	(
 		"The Showdown",
 		"/Game/Athena/Prototype/Blueprints/Cattus/BP_CattusDoggus_Scripting.BP_CattusDoggus_Scripting_C",
-		"/Game/Athena/Prototype/Blueprints/Cattus/BP_CattusDoggus_Scripting.BP_CattusDoggus_Scripting_C.LoadCattusLevel", 
+		"/Game/Athena/Prototype/Blueprints/Cattus/BP_CattusDoggus_Scripting.BP_CattusDoggus_Scripting_C.LoadCattusLevel",
 		1,
 		{
 			{
@@ -211,25 +211,25 @@ static inline std::vector<Event> Events =
 	),
 	Event
 	(
-		"Astronomical", 
+		"Astronomical",
 		"/CycloneJerky/Gameplay/BP_Jerky_Loader.BP_Jerky_Loader_C",
 		// "/CycloneJerky/Gameplay/BP_Jerky_Loader.BP_Jerky_Loader_C.LoadJerkyLevel", 
 		"",
 		1,
-		{ 
-			{ 
-				false, 
-				"/CycloneJerky/Gameplay/BP_Jerky_Scripting.BP_Jerky_Scripting_C.OnReady_093B6E664C060611B28F79B5E7052A39" 
+		{
+			{
+				false,
+				"/CycloneJerky/Gameplay/BP_Jerky_Scripting.BP_Jerky_Scripting_C.OnReady_093B6E664C060611B28F79B5E7052A39"
 			},
 			{
 				true,
-				"/CycloneJerky/Gameplay/BP_Jerky_Loader.BP_Jerky_Loader_C.OnReady_7FE9744D479411040654F5886C078D08" 
+				"/CycloneJerky/Gameplay/BP_Jerky_Loader.BP_Jerky_Loader_C.OnReady_7FE9744D479411040654F5886C078D08"
 			}
 		},
-		{ 
-			{ 
+		{
+			{
 				/* {
-					false, 
+					false,
 					"/CycloneJerky/Gameplay/BP_Jerky_Scripting.BP_Jerky_Scripting_C.startevent"
 				}, */
 				{
@@ -241,15 +241,15 @@ static inline std::vector<Event> Events =
 			}
 		},
 
-		"/CycloneJerky/Gameplay/BP_Jerky_Scripting.BP_Jerky_Scripting_C", 
-		"/Game/Athena/Playlists/Music/Playlist_Music_High.Playlist_Music_High", 
+		"/CycloneJerky/Gameplay/BP_Jerky_Scripting.BP_Jerky_Scripting_C",
+		"/Game/Athena/Playlists/Music/Playlist_Music_High.Playlist_Music_High",
 		12.41
 	),
 	Event
 	(
 		"Devourer of Worlds",
 		"/Junior/Blueprints/BP_Junior_Loader.BP_Junior_Loader_C",
-		"/Junior/Blueprints/BP_Junior_Loader.BP_Junior_Loader_C.LoadJuniorLevel", 
+		"/Junior/Blueprints/BP_Junior_Loader.BP_Junior_Loader_C.LoadJuniorLevel",
 		1,
 		{
 			{
@@ -396,31 +396,31 @@ static inline std::vector<Event> Events =
 		17.30
 	),
 	Event
-    (
-        "Operation: Sky Fire",
-        "",
-        "",
-        0,
-        {
+	(
+		"Operation: Sky Fire",
+		"",
+		"",
+		0,
+		{
 
-        },
-        {
-            {
-                {
-                    false,
-                    // "/Buffet/Gameplay/Blueprints/BP_Buffet_Master_Scripting.BP_Buffet_Master_Scripting_C.startevent"
-                    "/Script/SpecialEventGameplayRuntime.SpecialEventScript.StartEventAtIndex"
-                },
+		},
+		{
+			{
+				{
+					false,
+					// "/Buffet/Gameplay/Blueprints/BP_Buffet_Master_Scripting.BP_Buffet_Master_Scripting_C.startevent"
+					"/Script/SpecialEventGameplayRuntime.SpecialEventScript.StartEventAtIndex"
+				},
 
-                0
-            }
-        },
+				0
+			}
+		},
 
-        "/Kiwi/Gameplay/Kiwi_EventScript.Kiwi_EventScript_C",
-        // "/Buffet/Gameplay/Blueprints/BP_Buffet_Master_Scripting.BP_Buffet_Master_Scripting_C",
-        "/KiwiPlaylist/Playlists/Playlist_Kiwi.Playlist_Kiwi",
-        17.50
-    ),
+		"/Kiwi/Gameplay/Kiwi_EventScript.Kiwi_EventScript_C",
+		// "/Buffet/Gameplay/Blueprints/BP_Buffet_Master_Scripting.BP_Buffet_Master_Scripting_C",
+		"/KiwiPlaylist/Playlists/Playlist_Kiwi.Playlist_Kiwi",
+		17.50
+	),
 	Event
 	(
 		"Ice King Event",
@@ -447,7 +447,7 @@ static inline std::vector<Event> Events =
 		"/Game/Athena/Prototype/Blueprints/Mooney/BP_MooneyScripting.BP_MooneyScripting_C",
 		"/Game/Athena/Playlists/Playlist_DefaultSolo.Playlist_DefaultSolo",
 		7.20
-	)	
+	)
 };
 
 static inline UFortPlaylistAthena* GetEventPlaylist()
@@ -755,6 +755,42 @@ static inline void StartEvent()
 		static auto MeshRootStartEventFn = FindObject<UFunction>("/Script/SpecialEventGameplayRuntime.SpecialEventScriptMeshActor.MeshRootStartEvent");
 		auto SpecialEventScriptMeshActorClass = FindObject<UClass>("/Script/SpecialEventGameplayRuntime.SpecialEventScriptMeshActor");
 		auto AllSpecialEventScriptMeshActors = UGameplayStatics::GetAllActorsOfClass(GetWorld(), SpecialEventScriptMeshActorClass);
+
+		if (Fortnite_Version == 17.50)
+		{
+			auto Scripting = FindObject<UObject>("/Kiwi/Levels/Kiwi_P.Kiwi_P:PersistentLevel.BP_Kiwi_Master_Scripting_2");
+
+			float SecondsSinceEventBegan = 0;
+
+			auto EventPlaylist = GetEventPlaylist();
+
+			struct { UObject* GameState; UObject* Playlist; FGameplayTagContainer PlaylistContextTags; } OnReadyParams{ Cast<AFortGameStateAthena>(GetWorld()->GetGameState()), EventPlaylist };
+			if (EventPlaylist)
+			{
+				static auto GameplayTagContainerOffset = EventPlaylist->GetOffset("GameplayTagContainer");
+				OnReadyParams.PlaylistContextTags = EventPlaylist->Get<FGameplayTagContainer>(GameplayTagContainerOffset);
+			}
+			else
+			{
+				OnReadyParams.PlaylistContextTags = FGameplayTagContainer();
+			}
+			auto BB = FindObject<UFunction>("/Kiwi/Gameplay/BP_Kiwi_Master_Scripting.BP_Kiwi_Master_Scripting_C.OnReady_F1A32853487CB7603278E6847A5F2625");
+			Scripting->ProcessEvent(BB, &OnReadyParams);
+
+			auto eventscript = FindObject("/Kiwi/Levels/Kiwi_P.Kiwi_P:PersistentLevel.Kiwi_EventScript_2");
+			auto CC = FindObject<UFunction>("/Kiwi/Gameplay/Kiwi_EventScript.Kiwi_EventScript_C.OnReady_F51BF8E143832CE6C552938B26BEFA93");
+			auto DD = FindObject<UFunction>("/Kiwi/Gameplay/Kiwi_EventScript.Kiwi_EventScript_C.LoadKiwiAssets");
+			auto StartEventAtIndex = FindObject<UFunction>("/Script/SpecialEventGameplayRuntime.SpecialEventScript.StartEventAtIndex");
+			auto BP_OnScriptReady = FindObject<UFunction>("/Kiwi/Gameplay/Kiwi_EventScript.Kiwi_EventScript_C.BP_OnScriptReady");
+
+			// eventscript->ProcessEvent(CC, &bbparms);
+			eventscript->ProcessEvent(DD, &OnReadyParams);
+			eventscript->ProcessEvent(BP_OnScriptReady, &OnReadyParams);
+			eventscript->ProcessEvent(StartEventAtIndex, &SecondsSinceEventBegan);
+
+			static auto StartEvent = FindObject<UFunction>("/Kiwi/Gameplay/BP_Kiwi_Master_Scripting.BP_Kiwi_Master_Scripting_C.startevent");
+			Scripting->ProcessEvent(StartEvent, &SecondsSinceEventBegan);
+		}
 
 		if (AllSpecialEventScriptMeshActors.Num() > 0)
 		{

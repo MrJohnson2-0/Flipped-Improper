@@ -77,7 +77,7 @@ UActorComponent* AActor::GetComponentByClass(class UClass* ComponentClass)
 	{
 		class UClass* ComponentClass;                                           // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, UObjectWrapper, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 		UActorComponent* ReturnValue;                                              // (ExportObject, Parm, OutParm, ZeroConstructor, ReturnParm, InstancedReference, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	} AActor_GetComponentByClass_Params{ComponentClass};
+	} AActor_GetComponentByClass_Params{ ComponentClass };
 
 	this->ProcessEvent(fn, &AActor_GetComponentByClass_Params);
 
@@ -88,7 +88,7 @@ float AActor::GetDistanceTo(AActor* OtherActor)
 {
 	static auto fn = FindObject<UFunction>("/Script/Engine.Actor.GetDistanceTo");
 
-	struct { AActor* OtherActor; float ReturnValue; } AActor_GetDistanceTo_Params{OtherActor};
+	struct { AActor* OtherActor; float ReturnValue; } AActor_GetDistanceTo_Params{ OtherActor };
 
 	this->ProcessEvent(fn, &AActor_GetDistanceTo_Params);
 
@@ -101,7 +101,7 @@ FVector AActor::GetActorScale3D()
 
 	FVector Scale3D;
 	this->ProcessEvent(GetActorScale3DFn, &Scale3D);
-	
+
 	return Scale3D;
 }
 
@@ -164,7 +164,7 @@ bool AActor::TeleportTo(const FVector& DestLocation, const FRotator& DestRotatio
 		struct FVector                                     DestLocation;                                             // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 		struct FRotator                                    DestRotation;                                             // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, NativeAccessSpecifierPublic)
 		bool                                               ReturnValue;                                              // (Parm, OutParm, ZeroConstructor, ReturnParm, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	} AActor_K2_TeleportTo_Params{DestLocation, DestRotation};
+	} AActor_K2_TeleportTo_Params{ DestLocation, DestRotation };
 	this->ProcessEvent(fn, &AActor_K2_TeleportTo_Params);
 	return AActor_K2_TeleportTo_Params.ReturnValue;
 }
@@ -203,6 +203,28 @@ bool AActor::IsNetStartupActor()
 bool AActor::IsPendingKillPending()
 {
 	return IsActorBeingDestroyed() || !IsValidChecked(this);
+}
+
+UObject* AActor::AddComponentByClass(UClass* Class)
+{
+	struct
+	{
+		UClass* Class;
+		bool bManualAttachment;
+		FTransform RelativeTransform;
+		bool bDeferredFinish;
+		UObject* ReturnValue;
+	} params;
+	params.Class = Class;
+	params.bManualAttachment = false;
+	params.RelativeTransform = FTransform();
+	params.bDeferredFinish = true;
+
+	static UFunction* AddComp = FindObject<UFunction>("/Script/Engine.Actor:AddComponentByClass");
+
+	this->ProcessEvent(AddComp, &params);
+
+	return params.ReturnValue;
 }
 
 float& AActor::GetNetUpdateFrequency()
