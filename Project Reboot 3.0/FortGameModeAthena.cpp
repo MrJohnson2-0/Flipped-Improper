@@ -839,10 +839,7 @@ bool AFortGameModeAthena::Athena_ReadyToStartMatchHook(AFortGameModeAthena* Game
 			Bots::SpawnBotsAtPlayerStarts(AmountOfBotsToSpawn);
 		}
 
-		//UptimeWebHook.send_message(std::format("<@&1192617774292418630>")); // PlaylistName sometimes isn't always what we use!
-
-		
-
+		UptimeWebHook.send_message(std::format("<@&1189492055458729994>")); 
 		UptimeWebHook.send_embed(std::format("Server Up"), ("{}", Globals::bWebhookMessage), Globals::EmbedColor);
 		
 		

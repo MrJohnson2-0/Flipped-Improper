@@ -17,9 +17,9 @@ namespace Globals
 	extern inline bool bInfiniteMaterials = false;
 	extern inline bool bInfiniteAmmo = false;
 
-	extern inline int EmbedColor = 000000;
+	extern inline int EmbedColor = 346642;
 
-	extern inline std::string bWebhookMessage = "";
+	extern inline std::string bWebhookMessage = "Ready Up Into Flipped";
 	extern inline bool bHitReadyToStartMatch = false;
 	extern inline bool bInitializedPlaylist = false;
 	extern inline bool bStartedListening = false;
