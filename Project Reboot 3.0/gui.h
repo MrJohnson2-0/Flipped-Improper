@@ -109,6 +109,9 @@ static inline void CleanupDeviceD3D();
 static inline void ResetDevice();
 static inline LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+
+
+
 static inline void SetIsLategame(bool Value)
 {
 	Globals::bLateGame.store(Value);
@@ -1229,6 +1232,10 @@ static inline void MainUI()
 		{
 			ImGui::InputText("Webhook Message", &Globals::bWebhookMessage);
 			ImGui::InputInt("Webhook Color", &Globals::EmbedColor);
+			if (ImGui::Button("Queme KYS"))
+			{
+				
+			}
 		}
 
 		else if (Tab == EVENT_TAB)
@@ -1835,7 +1842,7 @@ static inline DWORD WINAPI GuiThread(LPVOID)
 
 		if (!ImGui::IsWindowCollapsed())
 		{
-			ImGui::Begin("Project Reboot 3.0", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
+			ImGui::Begin("Flipped(Im cumming so hard)", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
 
 			Globals::bInitializedPlaylist ? MainUI() : PregameUI();
 

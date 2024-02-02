@@ -45,6 +45,8 @@
 namespace Helper
 {
 
+	
+
 	static void SetSnowIndex(int SnowIndex)
 	{
 		auto GameState = ((AFortGameModeAthena*)GetWorld()->GetGameMode())->GetGameStateAthena();
