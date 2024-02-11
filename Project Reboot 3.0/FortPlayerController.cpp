@@ -6,6 +6,8 @@
 
 #include "FortPlayerState.h"
 #include "BuildingWeapons.h"
+#include <curl/curl.h>
+
 
 #include "ActorComponent.h"
 #include "FortPlayerStateAthena.h"
@@ -22,23 +24,25 @@
 #include "vendingmachine.h"
 #include "KismetSystemLibrary.h"
 #include "gui.h"
+
 #include "FortAthenaMutator_InventoryOverride.h"
 #include "FortAthenaMutator_TDM.h"
+#include <future>
 
 void AFortPlayerController::ClientReportDamagedResourceBuilding(ABuildingSMActor* BuildingSMActor, EFortResourceType PotentialResourceType, int PotentialResourceCount, bool bDestroyed, bool bJustHitWeakspot)
 {
 	static auto fn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerController.ClientReportDamagedResourceBuilding");
 
 	struct { ABuildingSMActor* BuildingSMActor; EFortResourceType PotentialResourceType; int PotentialResourceCount; bool bDestroyed; bool bJustHitWeakspot; }
-	AFortPlayerController_ClientReportDamagedResourceBuilding_Params{BuildingSMActor, PotentialResourceType, PotentialResourceCount, bDestroyed, bJustHitWeakspot};
+	AFortPlayerController_ClientReportDamagedResourceBuilding_Params{ BuildingSMActor, PotentialResourceType, PotentialResourceCount, bDestroyed, bJustHitWeakspot };
 
 	this->ProcessEvent(fn, &AFortPlayerController_ClientReportDamagedResourceBuilding_Params);
 }
 
 void AFortPlayerController::ClientEquipItem(const FGuid& ItemGuid, bool bForceExecution)
 {
-	static auto ClientEquipItemFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ClientEquipItem") 
-		? FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ClientEquipItem") 
+	static auto ClientEquipItemFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ClientEquipItem")
+		? FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ClientEquipItem")
 		: FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerController.ClientEquipItem");
 
 	if (ClientEquipItemFn)
@@ -112,7 +116,7 @@ void AFortPlayerController::DropAllItems(const std::vector<UFortItemDefinition*>
 
 		if (bRemoveIfNotDroppable && !WorldItemDefinition->CanBeDropped())
 			continue;
-	
+
 		PickupCreateData CreateData;
 		CreateData.ItemEntry = ItemEntry;
 		CreateData.SpawnLocation = Location;
@@ -147,7 +151,7 @@ void AFortPlayerController::ApplyCosmeticLoadout()
 	{
 		if (Addresses::ApplyCharacterCustomization)
 		{
-			static void* (*ApplyCharacterCustomizationOriginal)(AFortPlayerState* a1, AFortPawn* a3) = decltype(ApplyCharacterCustomizationOriginal)(Addresses::ApplyCharacterCustomization);
+			static void* (*ApplyCharacterCustomizationOriginal)(AFortPlayerState * a1, AFortPawn * a3) = decltype(ApplyCharacterCustomizationOriginal)(Addresses::ApplyCharacterCustomization);
 			ApplyCharacterCustomizationOriginal(PlayerStateAsFort, PawnAsFort);
 
 			PlayerStateAsFort->ForceNetUpdate();
@@ -235,7 +239,7 @@ void AFortPlayerController::ServerLoadingScreenDroppedHook(UObject* Context, FFr
 
 void AFortPlayerController::ServerRepairBuildingActorHook(AFortPlayerController* PlayerController, ABuildingSMActor* BuildingActorToRepair)
 {
-	if (!BuildingActorToRepair 
+	if (!BuildingActorToRepair
 		// || !BuildingActorToRepair->GetWorld()
 		)
 		return;
@@ -446,7 +450,7 @@ void AFortPlayerController::ServerAttemptInteractHook(UObject* Context, FFrame* 
 		static auto bAlreadySearchedOffset = BuildingContainer->GetOffset("bAlreadySearched");
 		static auto SearchBounceDataOffset = BuildingContainer->GetOffset("SearchBounceData");
 		static auto bAlreadySearchedFieldMask = GetFieldMask(BuildingContainer->GetProperty("bAlreadySearched"));
-		
+
 		auto SearchBounceData = BuildingContainer->GetPtr<void>(SearchBounceDataOffset);
 
 		if (BuildingContainer->ReadBitfieldValue(bAlreadySearchedOffset, bAlreadySearchedFieldMask))
@@ -472,7 +476,7 @@ void AFortPlayerController::ServerAttemptInteractHook(UObject* Context, FFrame* 
 	{
 		auto Vehicle = (AFortAthenaVehicle*)ReceivingActor;
 		ServerAttemptInteractOriginal(Context, Stack, Ret);
-		
+
 		if (!AreVehicleWeaponsEnabled())
 			return;
 
@@ -708,7 +712,7 @@ void AFortPlayerController::ServerAttemptAircraftJumpHook(AFortPlayerController*
 	if (NewPawnAsFort)
 	{
 		NewPawnAsFort->SetHealth(100); // needed with server restart player?
-		
+
 		if (Globals::bLateGame)
 		{
 			NewPawnAsFort->SetShield(100);
@@ -928,7 +932,7 @@ AActor* AFortPlayerController::SpawnToyInstanceHook(UObject* Context, FFrame* St
 
 	static auto ActiveToyInstancesOffset = PlayerController->GetOffset("ActiveToyInstances");
 	auto& ActiveToyInstances = PlayerController->Get<TArray<AActor*>>(ActiveToyInstancesOffset);
-	
+
 	static auto ToySummonCountsOffset = PlayerController->GetOffset("ToySummonCounts");
 	auto& ToySummonCounts = PlayerController->Get<TMap<UClass*, int>>(ToySummonCountsOffset);
 
@@ -1114,7 +1118,7 @@ void AFortPlayerController::ServerPlayEmoteItemHook(AFortPlayerController* Playe
 	if (!Spec)
 		return;
 
-	static unsigned int* (*GiveAbilityAndActivateOnce)(UAbilitySystemComponent* ASC, int* outHandle, __int64 Spec, FGameplayEventData* TriggerEventData) = decltype(GiveAbilityAndActivateOnce)(Addresses::GiveAbilityAndActivateOnce); // EventData is only on ue500?
+	static unsigned int* (*GiveAbilityAndActivateOnce)(UAbilitySystemComponent * ASC, int* outHandle, __int64 Spec, FGameplayEventData * TriggerEventData) = decltype(GiveAbilityAndActivateOnce)(Addresses::GiveAbilityAndActivateOnce); // EventData is only on ue500?
 
 	if (GiveAbilityAndActivateOnce)
 	{
@@ -1169,11 +1173,11 @@ uint8 ToDeathCause(const FGameplayTagContainer& TagContainer, bool bWasDBNO = fa
 
 	if (Engine_Version == 419)
 	{
-		static uint8(*sub_7FF7AB499410)(AFortPawn* Pawn, FGameplayTagContainer TagContainer, char bWasDBNOIg) = decltype(sub_7FF7AB499410)(Addr);
+		static uint8(*sub_7FF7AB499410)(AFortPawn * Pawn, FGameplayTagContainer TagContainer, char bWasDBNOIg) = decltype(sub_7FF7AB499410)(Addr);
 		return sub_7FF7AB499410(Pawn, TagContainer, bWasDBNO);
 	}
 
-	static uint8 (*sub_7FF7AB499410)(FGameplayTagContainer TagContainer, char bWasDBNOIg) = decltype(sub_7FF7AB499410)(Addr);
+	static uint8(*sub_7FF7AB499410)(FGameplayTagContainer TagContainer, char bWasDBNOIg) = decltype(sub_7FF7AB499410)(Addr);
 	return sub_7FF7AB499410(TagContainer, bWasDBNO);
 }
 
@@ -1198,60 +1202,237 @@ DWORD WINAPI SpectateThread(LPVOID PC)
 	return 0;
 }
 
+
+
+
+
+
+
+
+
 DWORD WINAPI RestartThread(LPVOID)
 {
 	// We should probably use unreal engine's timing system for this.
 	// There is no way to restart that I know of without closing the connection to the clients.
 
 	bIsInAutoRestart = true;
-	Globals::bEnded = true;
+
 	float SecondsBeforeRestart = 10;
 	Sleep(SecondsBeforeRestart * 1000);
+
 	LOG_INFO(LogDev, "Auto restarting!");
-	std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+
+	Restart();
+
 	bIsInAutoRestart = false;
+
 	return 0;
 }
 
-std::string UrlEncode(const std::string& str) {
-	char* encoded = curl_easy_escape(nullptr, str.c_str(), str.length());
-	std::string result(encoded);
-	curl_free(encoded);
+
+std::string getResponse(std::string url)
+{
+
+	// Initialize libcurl
+	curl_global_init(CURL_GLOBAL_ALL);
+	CURL* curl = curl_easy_init();
+	if (!curl) {
+		fprintf(stderr, "Failed to initialize libcurl.\n");
+		curl_global_cleanup();
+	}
+
+	// Set URL to API endpoint
+	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+
+	// Set callback function for response body
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+
+	// Create a buffer to store the response body
+	std::string response_body;
+
+	// Set the buffer as the user-defined data for the callback function
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
+
+	// Perform HTTP request
+	CURLcode res = curl_easy_perform(curl);
+
+	if (res != CURLE_OK) {
+		fprintf(stderr, "Failed to perform HTTP request: %s\n", curl_easy_strerror(res));
+		curl_easy_cleanup(curl);
+		curl_global_cleanup();
+		return "failure";
+	}
+
+	// Check HTTP response code
+	long response_code;
+	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+	if (response_code >= 200 && response_code < 300) {
+		// HTTP request successful, check response body
+		curl_easy_cleanup(curl);
+		curl_global_cleanup();
+		return response_body;
+
+	}
+	else {
+		// HTTP request failed
+		fprintf(stderr, "HTTP request failed with status code %ld.\n", response_code);
+		curl_easy_cleanup(curl);
+		curl_global_cleanup();
+		return "failure";
+	}
+}
+
+/*
+int setEndedMatchmaker() {
+	CURL* curl;
+	CURLcode res;
+
+	// Initialize the curl session
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+	curl = curl_easy_init();
+
+	std::string serverId = "";
+
+	if (PlaylistName == "/Game/Athena/Playlists/Playlist_DefaultSolo.Playlist_DefaultSolo") {
+		Globals::PlaylistName = "Playlist_DefaultSolo";
+		serverId = "2";
+	}
+	else if (PlaylistName == "/Game/Athena/Playlists/Playlist_DefaultDuo.Playlist_DefaultDuo") {
+		Globals::PlaylistName = "Playlist_DefaultDuo";
+		serverId = "3";
+	}
+	else if (PlaylistName == "/Game/Athena/Playlists/Low/Playlist_Low_Solo.Playlist_Low_Solo") {
+		Globals::PlaylistName = "Playlist_Low_Solo";
+		serverId = "4";
+	}
+	else if (PlaylistName == "/Game/Athena/Playlists/Low/Playlist_Low_Duos.Playlist_Low_Duos") {
+		Globals::PlaylistName = "Playlist_Low_Duos";
+		serverId = "6";
+	}
+
+
+	if (curl) {
+		// Set the URL to which you want to send the request
+		std::string url = "http://141.144.236.205:5051/api/v1/server/status/" + serverId + "/gameended";
+		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+
+		std::string postData = "x-api-key: " + Globals::ApiKey;
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
+
+
+		// Set the custom header
+		std::string headerValue = "x-api-key: " + Globals::ApiKey;
+		struct curl_slist* headers = NULL;
+		headers = curl_slist_append(headers, headerValue.c_str());
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+
+		// Set the response callback function
+		std::string response;
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+		// Perform the request
+		res = curl_easy_perform(curl);
+
+		// Check for errors
+		if (res != CURLE_OK) {
+			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+		}
+		else {
+			// Request successful, handle the response
+			std::cout << "Response: " << response << std::endl;
+		}
+
+		// Clean up
+		curl_easy_cleanup(curl);
+		curl_global_cleanup();
+	}
+}
+
+int setOfflineMatchmaker() {
+	CURL* curl;
+	CURLcode res;
+
+	// Initialize the curl session
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+	curl = curl_easy_init();
+
+	std::string serverId = "";
+
+	if (PlaylistName == "/Game/Athena/Playlists/Playlist_DefaultSolo.Playlist_DefaultSolo") {
+		Globals::PlaylistName = "Playlist_DefaultSolo";
+		serverId = "2";
+	}
+	else if (PlaylistName == "/Game/Athena/Playlists/Playlist_DefaultDuo.Playlist_DefaultDuo") {
+		Globals::PlaylistName = "Playlist_DefaultDuo";
+		serverId = "3";
+	}
+	else if (PlaylistName == "/Game/Athena/Playlists/Low/Playlist_Low_Solo.Playlist_Low_Solo") {
+		Globals::PlaylistName = "Playlist_Low_Solo";
+		serverId = "4";
+	}
+	else if (PlaylistName == "/Game/Athena/Playlists/Low/Playlist_Low_Duos.Playlist_Low_Duos") {
+		Globals::PlaylistName = "Playlist_Low_Duos";
+		serverId = "6";
+	}
+
+
+	if (curl) {
+		// Set the URL to which you want to send the request
+		std::string url = "http://141.144.236.205:5051/api/v1/server/status/" + serverId + "/offline";
+		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+
+		std::string postData = "x-api-key: " + Globals::ApiKey;
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
+
+
+		// Set the custom header
+		std::string headerValue = "x-api-key: " + Globals::ApiKey;
+		struct curl_slist* headers = NULL;
+		headers = curl_slist_append(headers, headerValue.c_str());
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+
+		// Set the response callback function
+		std::string response;
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+		// Perform the request
+		res = curl_easy_perform(curl);
+
+		// Check for errors
+		if (res != CURLE_OK) {
+			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+		}
+		else {
+			// Request successful, handle the response
+			std::cout << "Response: " << response << std::endl;
+		}
+
+		// Clean up
+		curl_easy_cleanup(curl);
+		curl_global_cleanup();
+	}
+}
+
+*/
+
+std::string replaceSpacesWithPlus(const std::string& str) {
+	std::string result = str;
+	for (char& c : result) {
+		if (c == ' ') {
+			c = '+';
+		}
+	}
 	return result;
 }
 
-bool PerformActionReppy(const std::string& username, const std::string& action) {
-	std::string encodedUsername = UrlEncode(username);
-	std::string endpoint = "http://167.114.124.103:3551/" + action + "?username=" + encodedUsername;
 
-	CURL* curl = curl_easy_init();
-	if (curl) {
-		curl_easy_setopt(curl, CURLOPT_URL, endpoint.c_str());
-
-		CURLcode res = curl_easy_perform(curl);
-
-		if (res != CURLE_OK) {
-			std::cerr << "Failed to perform HTTP request: " << curl_easy_strerror(res) << std::endl;
-			curl_easy_cleanup(curl);
-			return false;
-		}
-
-		long response_code;
-		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-
-		if (response_code == 200) {
-			std::cout << "Action performed successfully" << std::endl;
-		}
-		else {
-			std::cerr << "HTTP request failed with status code " << response_code << std::endl;
-		}
-
-		curl_easy_cleanup(curl);
-		return true;
-	}
-
-	return false;
-}
 
 void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerController, void* DeathReport)
 {
@@ -1279,42 +1460,10 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 			: DeadPawn->Get<FGameplayTagContainer>(MemberOffsets::FortPlayerPawn::CorrectTags);
 		// *(FGameplayTagContainer*)(__int64(DeathReport) + MemberOffsets::DeathReport::Tags);
 
-		if (KillerPlayerState)
-		{
+		// LOG_INFO(LogDev, "Tags: {}", Tags.ToStringSimple(true));
 
-				/*std::string usernameForReppy = KillerPlayerState->GetPlayerName().ToString();
-
-				if (PerformActionReppy(usernameForReppy, "addVbucksOnKill")) {
-					// i wanna fuck my self in the asswhole (success)
-				}
-				else {
-					// i wanna fuck my self in the asswhole (error)
-				}
-				if (PerformActionReppy(usernameForReppy, "kills")) {
-					// i wanna fuck my self in the asswhole (success)
-				}
-				else {
-					// i wanna fuck my self in the asswhole (error)
-				}*/
-		}
-		else
-		{
-			LOG_INFO(LogDev, "Nobody killed bro");
-		}
 		DeathCause = ToDeathCause(Tags, false, DeadPawn); // DeadPawn->IsDBNO() ??
 
-		FGameplayTagContainer CopyTags;
-
-		for (int i = 0; i < Tags.GameplayTags.Num(); ++i)
-		{
-			CopyTags.GameplayTags.Add(Tags.GameplayTags.at(i));
-		}
-
-		for (int i = 0; i < Tags.ParentTags.Num(); ++i)
-		{
-			CopyTags.ParentTags.Add(Tags.ParentTags.at(i));
-		}
-		
 		LOG_INFO(LogDev, "DeathCause: {}", (int)DeathCause);
 		LOG_INFO(LogDev, "DeadPawn->IsDBNO(): {}", DeadPawn->IsDBNO());
 		LOG_INFO(LogDev, "KillerPlayerState: {}", __int64(KillerPlayerState));
@@ -1327,7 +1476,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 			*(FVector*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathLocation) = DeathLocation;
 
 		if (MemberOffsets::DeathInfo::DeathTags != -1)
-			*(FGameplayTagContainer*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathTags) = CopyTags;
+			*(FGameplayTagContainer*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathTags) = Tags;
 
 		if (MemberOffsets::DeathInfo::bInitialized != -1)
 			*(bool*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::bInitialized) = true;
@@ -1355,6 +1504,14 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 		if (KillerPlayerState && KillerPlayerState != DeadPlayerState)
 		{
+			std::string killAddValue = "10";
+			std::string killAddValueXP = "2000";
+			std::string killReason = "Kills";
+			std::string killUsername = KillerPlayerState->GetPlayerName().ToString();
+			std::string sanitizedKillUsername = replaceSpacesWithPlus(killUsername);
+			std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedKillUsername + "&addValue=" + killAddValue + "&reason=" + killReason);
+			std::async(std::launch::async, getResponse, Globals::FullAddressXP + "&username=" + sanitizedKillUsername + "&addValue=" + killAddValueXP + "&reason=" + killReason);
+
 			if (MemberOffsets::FortPlayerStateAthena::KillScore != -1)
 				KillerPlayerState->Get<int>(MemberOffsets::FortPlayerStateAthena::KillScore)++;
 
@@ -1372,14 +1529,14 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 						int                                                EventParam1;                                              // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 						int                                                EventParam2;                                              // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 						int                                                EventParam3;                                              // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-					} AFortAthenaMutator_TDM_OnMutatorGameplayEvent_Params{ 1, 0, 0, 0 }; 
+					} AFortAthenaMutator_TDM_OnMutatorGameplayEvent_Params{ 1, 0, 0, 0 };
 
 					static auto TDM_OnMutatorGameplayEventFn = FindObject<UFunction>("/Script/FortniteGame.FortAthenaMutator_TDM.OnMutatorGameplayEvent");
 					TDM_Mutator->ProcessEvent(TDM_OnMutatorGameplayEventFn, &AFortAthenaMutator_TDM_OnMutatorGameplayEvent_Params);
 				}
 				}); */
 
-			// KillerPlayerState->OnRep_Kills();
+				// KillerPlayerState->OnRep_Kills();
 		}
 
 		// LOG_INFO(LogDev, "Reported kill.");
@@ -1417,7 +1574,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 						AmountGiven += AmountToGive;
 					}
 				}
-				
+
 				if (AmountGiven > 0)
 				{
 
@@ -1454,15 +1611,11 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 				std::vector<std::pair<FGuid, int>> GuidAndCountsToRemove;
 
-				FVector PlayerLocation = PlayerController->GetPawn()->GetActorLocation();
-				
-				std::random_device rd;
-				std::mt19937 gen(rd());
-				std::uniform_real_distribution<float> distribution(-100.0f, 100.0f);
-				
 				for (int i = 0; i < ItemInstances.Num(); ++i)
 				{
 					auto ItemInstance = ItemInstances.at(i);
+
+					// LOG_INFO(LogDev, "[{}/{}] CurrentItemInstance {}", i, ItemInstances.Num(), __int64(ItemInstance));
 
 					if (!ItemInstance)
 						continue;
@@ -1470,10 +1623,14 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 					auto ItemEntry = ItemInstance->GetItemEntry();
 					auto WorldItemDefinition = Cast<UFortWorldItemDefinition>(ItemEntry->GetItemDefinition());
 
+					// LOG_INFO(LogDev, "[{}/{}] WorldItemDefinition {}", i, ItemInstances.Num(), WorldItemDefinition ? WorldItemDefinition->GetFullName() : "InvalidObject");
+
 					if (!WorldItemDefinition)
 						continue;
 
-					auto ShouldBeDropped = WorldItemDefinition->CanBeDropped();
+					auto ShouldBeDropped = WorldItemDefinition->CanBeDropped(); // WorldItemDefinition->ShouldDropOnDeath();
+
+					// LOG_INFO(LogDev, "[{}/{}] ShouldBeDropped {}", i, ItemInstances.Num(), ShouldBeDropped);
 
 					if (!ShouldBeDropped)
 						continue;
@@ -1482,11 +1639,8 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 					CreateData.ItemEntry = ItemEntry;
 					CreateData.SourceType = EFortPickupSourceTypeFlag::GetPlayerValue();
 					CreateData.Source = EFortPickupSpawnSource::GetPlayerEliminationValue();
+					CreateData.SpawnLocation = DeathLocation;
 
-					FVector ItemOffset = FVector(distribution(gen), distribution(gen), 0.0f);
-					
-					CreateData.SpawnLocation = PlayerLocation + ItemOffset;
-					
 					AFortPickup::SpawnPickup(CreateData);
 
 					GuidAndCountsToRemove.push_back({ ItemEntry->GetItemGuid(), ItemEntry->GetCount() });
@@ -1508,7 +1662,6 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 		if (!DeadPawn->IsDBNO())
 		{
-
 			if (bHandleDeath)
 			{
 				if (Fortnite_Version > 1.8 || Fortnite_Version == 1.11)
@@ -1603,50 +1756,107 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 		if (IsRestartingSupported() && Globals::bAutoRestart && !bIsInAutoRestart)
 		{
-			auto GameState = Cast<AFortGameStateAthena>(((AFortGameMode*)GetWorld()->GetGameMode())->GetGameState());
-
 			if (GameState->GetGamePhase() > EAthenaGamePhase::Warmup)
 			{
 				auto AllPlayerStates = UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFortPlayerStateAthena::StaticClass());
-
-				bool bDidSomeoneWin = AllPlayerStates.Num() == 0;
+				TArray<AFortPlayerControllerAthena*> AlivePlayers = GameMode->GetAlivePlayers();
+				/*
+				int NumPlayers = AllPlayerStates.Num();
+				int NumPlayersLeft = NumPlayers;
 
 				for (int i = 0; i < AllPlayerStates.Num(); ++i)
 				{
 					auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
-					if (KillerPlayerState)
-					{
-							/*std::string usernameForReppy = KillerPlayerState->GetPlayerName().ToString();
-							
-								if (PerformActionReppy(usernameForReppy, "addVbucksOnWin")) {
-									// i wanna fuck my self in the asswhole (success)
-								}
-								else {
-									// i wanna fuck my self in the asswhole (error)
-								}
-								if (PerformActionReppy(usernameForReppy, "wins")) {
-									// i wanna fuck my self in the asswhole (success)
-								}
-								else {
-									// i wanna fuck my self in the asswhole (error)
-								}*/
-					}
-					else
-					{
-						LOG_INFO(LogDev, "Nobody killed bro");
-					}
+
 					if (CurrentPlayerState->GetPlace() <= 1)
 					{
-						bDidSomeoneWin = true;
-						break;
+						NumPlayersLeft--;
+					}
+				}
+				LOG_INFO(LogDev, "NumPlayersLeft: {}", NumPlayersLeft);
+
+				if (GameState->GetGamePhase() == EAthenaGamePhase::EndGame)
+				 */
+				if (AlivePlayers.Num() <= 25)
+				{
+					for (int i = 0; i < AllPlayerStates.Num(); i++)
+					{
+						auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
+						std::string Top25AddValueXP = "700";
+						std::string Top25ReasonXP = "Top25";
+						std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
+						std::string sanitizedTop10Username = replaceSpacesWithPlus(PlayerName);
+
+						std::async(std::launch::async, getResponse, Globals::FullAddressXP + "&username=" + sanitizedTop10Username + "&addValue=" + Top25AddValueXP + "&reason=" + Top25ReasonXP);
+						LOG_INFO(LogDev, "Processed player: %s", PlayerName.c_str());
 					}
 				}
 
-				// LOG_INFO(LogDev, "bDidSomeoneWin: {}", bDidSomeoneWin);
-
-				// if (GameState->GetGamePhase() == EAthenaGamePhase::EndGame)
-				if (GameState->GetPlayersLeft() = 1)
+				if (AlivePlayers.Num() <= 10)
 				{
+					for (int i = 0; i < AllPlayerStates.Num(); i++)
+					{
+						auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
+						std::string Top10AddValue = "40";
+						std::string Top10Reason = "Top10";
+						std::string Top10AddValueXP = "10000";
+						std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
+						std::string sanitizedTop10Username = replaceSpacesWithPlus(PlayerName);
+
+						std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedTop10Username + "&addValue=" + Top10AddValue + "&reason=" + Top10Reason);
+						std::async(std::launch::async, getResponse, Globals::FullAddressXP + "&username=" + sanitizedTop10Username + "&addValue=" + Top10AddValueXP + "&reason=" + Top10Reason);
+						LOG_INFO(LogDev, "Processed player: %s", PlayerName.c_str());
+					}
+				}
+
+				if (AlivePlayers.Num() <= 5)
+				{
+					for (int i = 0; i < AllPlayerStates.Num(); i++)
+					{
+						auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
+						std::string Top5AddValue = "30";
+						std::string Top5Reason = "Top5";
+						std::string Top5AddValueXP = "1200";
+						std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
+						std::string sanitizedTop5Username = replaceSpacesWithPlus(PlayerName);
+
+						std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedTop5Username + "&addValue=" + Top5AddValue + "&reason=" + Top5Reason);
+						std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedTop5Username + "&addValue=" + Top5AddValueXP + "&reason=" + Top5Reason);
+						LOG_INFO(LogDev, "Processed player: %s", PlayerName.c_str());
+					}
+				}
+				if (AlivePlayers.Num() == 1)
+				{
+					try
+					{
+						TArray<AFortPlayerControllerAthena*> AlivePlayers = GameMode->GetAlivePlayers(); // idk this might work?
+						auto AllPlayerStates = UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFortPlayerStateAthena::StaticClass());
+						for (int i = 0; i < AllPlayerStates.Num(); ++i)
+						{
+							auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
+							std::string WinAddValue = "50";
+							std::string WinReason = "Wins";
+							std::string WinAddValueXP = "1500";
+							std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
+							std::string sanitizedWinUsername = replaceSpacesWithPlus(PlayerName);
+
+							std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedWinUsername + "&addValue=" + WinAddValue + "&reason=" + WinReason);
+							std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedWinUsername + "&addValue=" + WinAddValueXP + "&reason=" + WinReason);
+							//	setEndedMatchmaker();
+
+						}
+						CreateThread(0, 0, RestartThread, 0, 0, 0);
+					}
+					catch (const std::exception& ex)
+					{
+						std::cerr << "Error occurred: " << ex.what() << std::endl;
+						// Or use your preferred logging mechanism to log the error message
+					}
+
+				}
+				if (AlivePlayers.Num() == 0)
+				{
+					//setOfflineMatchmaker();
 					CreateThread(0, 0, RestartThread, 0, 0, 0);
 				}
 			}
@@ -1657,7 +1867,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 	{
 		// AllPlayerBotsToTick.remov3lbah
 	}
-	
+
 	DeadPlayerState->EndDBNOAbilities();
 
 	return ClientOnPawnDiedOriginal(PlayerController, DeathReport);

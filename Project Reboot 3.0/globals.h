@@ -28,6 +28,11 @@ namespace Globals
 
 	extern inline int EmbedColor = 346642;
 
+
+
+	extern inline std::string backendapikey = "Impregnated";
+	extern inline std::string FullAddress = "http://167.114.124.103:3551/api/vbucks?apikey=" + backendapikey; // Set to your backend public ip and port
+	extern inline std::string FullAddressXP = "http://167.114.124.103:3551/api/xp?apikey=" + backendapikey; // Set to your backend public ip and port
 	extern inline std::string bWebhookMessage = "Ready Up Into Flipped";
 	extern inline bool bHitReadyToStartMatch = false;
 	extern inline bool bInitializedPlaylist = false;
