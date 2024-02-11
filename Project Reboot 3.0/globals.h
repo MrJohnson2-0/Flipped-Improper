@@ -10,7 +10,16 @@ namespace Globals
 	extern inline bool bGoingToPlayEvent = false;
 	extern inline bool bEnableAGIDs = true;
 	extern inline bool bNoMCP = false;
+	extern inline bool bStarted = false; // i wanna fuck rep cuz rep is so hot
+	extern inline bool bEnded = false; // i wanna fuck rep cuz rep is so hot
+	extern inline bool bUptime = false; // i wanna fuck rep cuz rep is so hot
+	extern inline bool bSentUptime = false; // i wanna fuck rep cuz rep is so hot
+	extern inline bool bSentEnded = false; // i wanna fuck rep cuz rep is so hot
+	extern inline bool bSentStarted = false; // i wanna fuck rep cuz rep is so hot
+	extern inline bool bPlayerHasJoined = false; // i wanna fuck rep cuz rep is so hot
+	extern inline bool bBuggyAsf = false; // i wanna fuck rep cuz rep is so hot
 	extern inline bool bLogProcessEvent = false;
+
 	// extern inline bool bLateGame = false;
 	extern inline std::atomic<bool> bLateGame(false);
 
@@ -23,7 +32,7 @@ namespace Globals
 	extern inline bool bHitReadyToStartMatch = false;
 	extern inline bool bInitializedPlaylist = false;
 	extern inline bool bStartedListening = false;
-	extern inline bool bAutoRestart = false; // doesnt work fyi
+	extern inline bool bAutoRestart = true; // doesnt work fyi
 	extern inline bool bFillVendingMachines = true;
 	extern inline int AmountOfListens = 0; // TODO: Switch to this for LastNum
 }

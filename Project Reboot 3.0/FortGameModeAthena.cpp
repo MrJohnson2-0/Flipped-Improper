@@ -839,8 +839,8 @@ bool AFortGameModeAthena::Athena_ReadyToStartMatchHook(AFortGameModeAthena* Game
 			Bots::SpawnBotsAtPlayerStarts(AmountOfBotsToSpawn);
 		}
 
-		UptimeWebHook.send_message(std::format("<@&1189492055458729994>")); 
-		UptimeWebHook.send_embed(std::format("Server Up"), ("{}", Globals::bWebhookMessage), Globals::EmbedColor);
+		/*UptimeWebHook.send_message(std::format("<@&1189492055458729994>")); 
+		UptimeWebHook.send_embed(std::format("Server Up"), ("{}", Globals::bWebhookMessage), Globals::EmbedColor);*/
 		
 		
 		
@@ -1134,7 +1134,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 	
 
 
-	if (Globals::bAutoRestart)
+	/*if (Globals::bAutoRestart)
 	{
 		static int LastNum123 = 15;
 
@@ -1150,7 +1150,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 
 			// Continue with other code as needed
 		}
-	}
+	}*/
 
 	// if (Engine_Version < 427)
 	{

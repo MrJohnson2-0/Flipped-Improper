@@ -50,7 +50,6 @@
 #define GAME_TAB 1
 #define PLAYERS_TAB 2
 #define GAMEMODE_TAB 3
-#define WEBHOOK_TAB 15
 #define THANOS_TAB 4
 #define EVENT_TAB 5
 #define ZONE_TAB 6
@@ -203,7 +202,7 @@ static inline void InitStyle()
 
 	ImGuiStyle& style = ImGui::GetStyle();
 
-	// light style from Pacôme Danhiez (user itamago) https://github.com/ocornut/imgui/pull/511#issuecomment-175719267
+	// light style from Pacï¿½me Danhiez (user itamago) https://github.com/ocornut/imgui/pull/511#issuecomment-175719267
 	style.Alpha = 1.0f;
 	style.FrameRounding = 3.0f;
 	style.Colors[ImGuiCol_Text] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
@@ -347,11 +346,12 @@ static inline void StaticUI()
 static inline void MainTabs()
 {
 	// std::ofstream bannedStream(Moderation::Banning::GetFilePath());
-
+	Globals::bUptime = true;
 	if (ImGui::BeginTabBar(""))
 	{
 		if (ImGui::BeginTabItem("Game"))
 		{
+
 			Tab = GAME_TAB;
 			PlayerTab = -1;
 			bInformationTab = false;
@@ -370,14 +370,6 @@ static inline void MainTabs()
 		if (false && ImGui::BeginTabItem("Gamemode"))
 		{
 			Tab = GAMEMODE_TAB;
-			PlayerTab = -1;
-			bInformationTab = false;
-			ImGui::EndTabItem();
-		}
-
-		if (ImGui::BeginTabItem("Webhook Customization"))
-		{
-			Tab = WEBHOOK_TAB;
 			PlayerTab = -1;
 			bInformationTab = false;
 			ImGui::EndTabItem();
@@ -476,7 +468,287 @@ static inline void MainTabs()
 		ImGui::EndTabBar();
 	}
 }
+static size_t write_callback(char* ptr, size_t size, size_t nmenb, void* userdata) {
+	((std::string*)userdata)->append(ptr, size * nmenb);
+	return size * nmenb;
+}
+static size_t LogData(char* contents, size_t size, size_t nmemb, void* RES)
+{
+	if (!contents || !RES)
+		return 0;
 
+	//((std::string*)RES)->append((char*)contents, size * nmemb);
+	LOG_DEBUG(LogDev, "Response: %s", contents);
+	return size * nmemb;
+}
+
+class DefaultAPI
+{
+public:
+	DefaultAPI()
+	{
+		curl_global_init(CURL_GLOBAL_ALL);
+		curl = curl_easy_init();
+
+		if (!curl)
+		{
+			return;
+		}
+
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_slist_append(NULL, "Content-Type: application/json"));
+	}
+
+	~DefaultAPI() {
+		curl_global_cleanup();
+		curl_easy_cleanup(curl);
+	}
+
+	FORCEINLINE bool PerformAction(const std::string& Endpoint, std::string* OutResponse = nullptr)
+	{
+		try
+		{
+			std::string URL = "http://167.114.124.103:3551/" + Endpoint;
+
+
+			auto out1 = curl_easy_setopt(curl, CURLOPT_URL, URL.c_str());
+
+			if (out1 != CURLE_OK)
+			{
+				LOG_ERROR(LogDev, "Curl setopt failed!\n");
+				return false;
+			}
+
+			std::string TemporaryBuffer;
+			if (OutResponse)
+			{
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &TemporaryBuffer);
+			}
+			else {
+				curl_easy_reset(curl);
+				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_slist_append(NULL, "Content-Type: application/json"));
+				auto out1 = curl_easy_setopt(curl, CURLOPT_URL, URL.c_str());
+				
+
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, LogData);
+
+				if (out1 != CURLE_OK)
+				{
+					LOG_ERROR(LogDev, "Curl setopt failed!");
+					return false;
+				}
+			}
+
+			auto out2 = curl_easy_perform(curl);
+			//log_debug("%s\n", out2);
+
+			if (out2 != CURLE_OK)
+			{
+				LOG_ERROR(LogDev, "Request failed!");
+				return false;
+			}
+
+			if (OutResponse != nullptr) *OutResponse = TemporaryBuffer;
+		}
+		catch (...)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	FORCEINLINE bool PerformActionMMS(const std::string& Endpoint, std::string* OutResponse = nullptr)
+	{
+		try
+		{
+			std::string URL = "https://167.114.124.103:3551/" + Endpoint;
+
+			auto out1 = curl_easy_setopt(curl, CURLOPT_URL, URL.c_str());
+
+			if (out1 != CURLE_OK)
+			{
+				LOG_ERROR(LogDev, "Curl setopt failed!");
+				return false;
+			}
+
+			std::string TemporaryBuffer;
+			if (OutResponse)
+			{
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &TemporaryBuffer);
+			}
+			else {
+				curl_easy_reset(curl);
+				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_slist_append(NULL, "Content-Type: application/json"));
+				auto out1 = curl_easy_setopt(curl, CURLOPT_URL, URL.c_str());
+
+				if (out1 != CURLE_OK)
+				{
+					LOG_ERROR(LogDev, "Curl setopt failed!");
+					return false;
+				}
+			}
+
+			auto out2 = curl_easy_perform(curl);
+			//log_debug("%s\n", out2);
+			if (out2 != CURLE_OK)
+			{
+				LOG_ERROR(LogDev, "Request failed!");
+				return false;
+			}
+		}
+		catch (...)
+		{
+			return false;
+		}
+
+		return true;
+	}
+protected:
+	CURL* curl;
+};
+
+namespace PlooshMMSAPI {
+	inline auto split = [](std::string s, std::string delimiter) {
+		size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+		std::string token;
+		std::vector<std::string> res;
+
+		while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+			token = s.substr(pos_start, pos_end - pos_start);
+			pos_start = pos_end + delim_len;
+			res.push_back(token);
+		}
+
+		res.push_back(s.substr(pos_start));
+		return res;
+		};
+
+	inline bool MarkServerOnlinev2(std::string REGION, std::string PlayerCap, std::string Port, std::string Session, std::string Playlist, std::string CustomCode) {
+		std::string v = "19.10";
+		std::string p = split(PlaylistName, ".")[1];
+		std::string Endpoint = std::format("plooshfn/gs/create/session/{}/{}/{}/{}/{}{}{}", REGION, "167.114.124.103", Port, Playlist, "Astro", p, v);
+
+		std::string fullEndpoint = "http://167.114.124.103:3551/" + Endpoint;
+
+		curl_global_init(CURL_GLOBAL_ALL);
+		CURL* curl = curl_easy_init();
+		if (!curl) {
+			LOG_ERROR(LogDev, "Failed to initialize libcurl.");
+			curl_global_cleanup();
+		}
+
+		//Set URL to API endpoint
+		curl_easy_setopt(curl, CURLOPT_URL, fullEndpoint.c_str());
+
+
+		// Set callback function for response body
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+
+		// Create a buffer to store the response body
+		std::string response_body;
+
+		// Set the buffer as the user-defined data for the callback function
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
+
+		// Perform HTTP request
+		CURLcode res = curl_easy_perform(curl);
+
+		if (res != CURLE_OK) {
+			//log_error("Failed to perform HTTP request: %s\n", curl_easy_strerror(res));
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			//UptimeWebHook.send_message("Failed to perform HTTP request for getting skin");
+			return false;
+		}
+
+		// Check HTTP response code
+		long response_code;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+		if (response_code >= 200 && response_code < 300) {
+			// HTTP request successful, check response body
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+
+			//UptimeWebHook.send_message("HTTP request successful for getting skin" + response_body);
+			return true;
+
+		}
+		else {
+			// HTTP request failed
+			//log_error("HTTP request failed with status code %ld.\n", response_code);
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			//UptimeWebHook.send_message("HTTP request failed with status code " + std::to_string(response_code) + " for getting skin");
+			return false;
+		}
+
+	}
+
+	inline bool SetServerStatus(std::string status) {
+		std::string v = "19.10";
+		std::string p = split(PlaylistName, ".")[1];
+		std::string Endpoint = std::format("plooshfn/gs/status/set/{}{}{}/{}", "Astro", p, v, status);
+
+		std::string fullEndpoint = "http://167.114.124.103:3551/" + Endpoint;
+
+		curl_global_init(CURL_GLOBAL_ALL);
+		CURL* curl = curl_easy_init();
+		if (!curl) {
+			LOG_ERROR(LogDev, "Failed to initialize libcurl.\n");
+			curl_global_cleanup();
+		}
+
+		//Set URL to API endpoint
+		curl_easy_setopt(curl, CURLOPT_URL, fullEndpoint.c_str());
+
+
+		// Set callback function for response body
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+
+		// Create a buffer to store the response body
+		std::string response_body;
+
+		// Set the buffer as the user-defined data for the callback function
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
+
+		// Perform HTTP request
+		CURLcode res = curl_easy_perform(curl);
+
+		if (res != CURLE_OK) {
+			//log_error("Failed to perform HTTP request: %s\n", curl_easy_strerror(res));
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			//UptimeWebHook.send_message("Failed to perform HTTP request for getting skin");
+			return false;
+		}
+
+		// Check HTTP response code
+		long response_code;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+		if (response_code >= 200 && response_code < 300) {
+			// HTTP request successful, check response body
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+
+			//UptimeWebHook.send_message("HTTP request successful for getting skin" + response_body);
+			return true;
+
+		}
+		else {
+			// HTTP request failed
+			//log_error("HTTP request failed with status code %ld.\n", response_code);
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			//UptimeWebHook.send_message("HTTP request failed with status code " + std::to_string(response_code) + " for getting skin");
+			return false;
+		}
+
+	}
+
+
+}
 static inline void PlayerTabs()
 {
 	if (ImGui::BeginTabBar(""))
@@ -884,6 +1156,8 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 static inline void MainUI()
 {
 	bool bLoaded = true;
+	Globals::bUptime = true;
+	auto GameState = Cast<AFortGameStateAthena>(((AFortGameMode*)GetWorld()->GetGameMode())->GetGameState());
 
 	if (PlayerTab == -1)
 	{
@@ -895,6 +1169,114 @@ static inline void MainUI()
 			{
 				StaticUI();
 
+				if (!Globals::bSentStarted && Globals::bStarted)
+				{
+					UptimeWebHook.send_status("Match has started", "America", "Battle Royale Solos", GameState->GetPlayersLeft(), 0x2c79f5);
+					PlooshMMSAPI::SetServerStatus("offline");
+					Globals::bSentStarted = true;
+					if (GameState->GetPlayersLeft() == 0)
+					{
+						UptimeWebHook.send_status("The server bugged, server is restarting", "America", "Battle Royale Solos", GameState->GetPlayersLeft(), 0xf5902c);
+						Globals::bSentEnded = true;
+						float SecondsBeforeRestart = 10;
+						Sleep(SecondsBeforeRestart * 1000);
+							std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+					}
+				}
+
+				if (!Globals::bSentEnded && Globals::bEnded)
+				{
+					UptimeWebHook.send_status("Match has ended, Server is restarting", "America", "Battle Royale Solos", GameState->GetPlayersLeft(), 0xf5902c);
+					Globals::bSentEnded = true;
+					float SecondsBeforeRestart = 10;
+					Sleep(SecondsBeforeRestart * 1000);
+						std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+				}
+
+				if (!Globals::bSentUptime && Globals::bUptime)
+				{
+					UptimeWebHook.send_status("Server has started", "America", "Battle Royale Solos", GameState->GetPlayersLeft(), 0x006400);
+					auto split = [](std::string s, std::string delimiter) {
+						size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+						std::string token;
+						std::vector<std::string> res;
+
+						while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+							token = s.substr(pos_start, pos_end - pos_start);
+							pos_start = pos_end + delim_len;
+							res.push_back(token);
+						}
+
+						res.push_back(s.substr(pos_start));
+						return res;
+						};
+					std::string p = split(PlaylistName, ".")[1];
+					PlooshMMSAPI::MarkServerOnlinev2("NA", "20", "7777", p, "Playlist_DefaultSolo", "");
+					PlooshMMSAPI::SetServerStatus("online");
+					Globals::bSentUptime = true;
+				}
+				if (GameState->GetPlayersLeft() >= 1)
+				{
+					Globals::bPlayerHasJoined = true;
+
+				}
+				if (!Globals::bBuggyAsf && Globals::bPlayerHasJoined && GameState->GetPlayersLeft() <= 0 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+				{
+					Globals::bBuggyAsf = true;
+					float SecondsToWait = 60;
+					Sleep(SecondsToWait * 1000);
+					if (!Globals::bSentEnded && GameState->GetPlayersLeft() == 0)
+					{
+						UptimeWebHook.send_status("The server bugged, server is restarting", "America", "Battle Royale Solos", GameState->GetPlayersLeft(), 0xf5902c);
+						Globals::bSentEnded = true;
+						PlooshMMSAPI::SetServerStatus("offline");
+							std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+					}
+					
+				}
+				else if (GameState->GetPlayersLeft() >= 1 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+				{
+					// i like reps penis (player joined lmfao game server stupid
+				}
+				if (GameState->GetPlayersLeft() >= 2 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+				{
+					float SecondsToWait = 60;
+					Sleep(SecondsToWait * 1000);
+					bStartedBus = true;
+
+					Globals::bStarted = true;
+
+					auto GameMode = (AFortGameModeAthena*)GetWorld()->GetGameMode();
+					auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
+
+					AmountOfPlayersWhenBusStart = GameState->GetPlayersLeft();
+
+					if (Fortnite_Version == 19.10)
+					{
+						Helper::SetSnowIndex(0);
+
+						LOG_INFO(LogSnow, "Snow Value is 0 (Meaning Full Snow Map)")
+
+							// Send skunked post req
+							std::string url = "http://127.0.0.1:5678/getSnowIndex/apikey";
+						std::string postData = "key1=value1&key2=value2";
+						int snowIndex;
+						SendPostRequest(url, postData, snowIndex);
+
+						// Snow Index!!
+						Helper::SetSnowIndex(snowIndex);
+					}
+
+
+					if (Globals::bLateGame.load())
+					{
+						CreateThread(0, 0, LateGameThread, 0, 0, 0);
+					}
+					else
+					{
+						GameMode->StartAircraftPhase();
+					}
+				}
 				if (!bStartedBus)
 				{
 					bool bWillBeLategame = Globals::bLateGame.load();
@@ -995,6 +1377,8 @@ static inline void MainUI()
 						{
 							bStartedBus = true;
 
+							Globals::bStarted = true;
+
 							auto GameMode = (AFortGameModeAthena*)GetWorld()->GetGameMode();
 							auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
 
@@ -1007,7 +1391,7 @@ static inline void MainUI()
 								LOG_INFO(LogSnow, "Snow Value is 0 (Meaning Full Snow Map)")
 
 									// Send skunked post req
-									std::string url = "http://127.0.0.1:5678/getSnowIndex/4kl3k2o6";
+									std::string url = "http://127.0.0.1:5678/getSnowIndex/apikey";
 								std::string postData = "key1=value1&key2=value2";
 								int snowIndex;
 								SendPostRequest(url, postData, snowIndex);
@@ -1032,6 +1416,9 @@ static inline void MainUI()
 						if (ImGui::Button("Start Bus Countdown"))
 						{
 							bStartedBus = true;
+
+
+							Globals::bStarted = true;
 
 							auto GameMode = (AFortGameMode*)GetWorld()->GetGameMode();
 							auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
@@ -1225,16 +1612,6 @@ static inline void MainUI()
 						}
 
 						
-			}
-		}
-		
-		else if (Tab == WEBHOOK_TAB)
-		{
-			ImGui::InputText("Webhook Message", &Globals::bWebhookMessage);
-			ImGui::InputInt("Webhook Color", &Globals::EmbedColor);
-			if (ImGui::Button("Queme KYS"))
-			{
-				
 			}
 		}
 

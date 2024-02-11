@@ -1204,17 +1204,53 @@ DWORD WINAPI RestartThread(LPVOID)
 	// There is no way to restart that I know of without closing the connection to the clients.
 
 	bIsInAutoRestart = true;
-
+	Globals::bEnded = true;
 	float SecondsBeforeRestart = 10;
 	Sleep(SecondsBeforeRestart * 1000);
-
 	LOG_INFO(LogDev, "Auto restarting!");
-
-	Restart();
-
+	std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
 	bIsInAutoRestart = false;
-
 	return 0;
+}
+
+std::string UrlEncode(const std::string& str) {
+	char* encoded = curl_easy_escape(nullptr, str.c_str(), str.length());
+	std::string result(encoded);
+	curl_free(encoded);
+	return result;
+}
+
+bool PerformActionReppy(const std::string& username, const std::string& action) {
+	std::string encodedUsername = UrlEncode(username);
+	std::string endpoint = "http://167.114.124.103:3551/" + action + "?username=" + encodedUsername;
+
+	CURL* curl = curl_easy_init();
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, endpoint.c_str());
+
+		CURLcode res = curl_easy_perform(curl);
+
+		if (res != CURLE_OK) {
+			std::cerr << "Failed to perform HTTP request: " << curl_easy_strerror(res) << std::endl;
+			curl_easy_cleanup(curl);
+			return false;
+		}
+
+		long response_code;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+
+		if (response_code == 200) {
+			std::cout << "Action performed successfully" << std::endl;
+		}
+		else {
+			std::cerr << "HTTP request failed with status code " << response_code << std::endl;
+		}
+
+		curl_easy_cleanup(curl);
+		return true;
+	}
+
+	return false;
 }
 
 void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerController, void* DeathReport)
@@ -1243,10 +1279,42 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 			: DeadPawn->Get<FGameplayTagContainer>(MemberOffsets::FortPlayerPawn::CorrectTags);
 		// *(FGameplayTagContainer*)(__int64(DeathReport) + MemberOffsets::DeathReport::Tags);
 
-		// LOG_INFO(LogDev, "Tags: {}", Tags.ToStringSimple(true));
+		if (KillerPlayerState)
+		{
 
+				/*std::string usernameForReppy = KillerPlayerState->GetPlayerName().ToString();
+
+				if (PerformActionReppy(usernameForReppy, "addVbucksOnKill")) {
+					// i wanna fuck my self in the asswhole (success)
+				}
+				else {
+					// i wanna fuck my self in the asswhole (error)
+				}
+				if (PerformActionReppy(usernameForReppy, "kills")) {
+					// i wanna fuck my self in the asswhole (success)
+				}
+				else {
+					// i wanna fuck my self in the asswhole (error)
+				}*/
+		}
+		else
+		{
+			LOG_INFO(LogDev, "Nobody killed bro");
+		}
 		DeathCause = ToDeathCause(Tags, false, DeadPawn); // DeadPawn->IsDBNO() ??
 
+		FGameplayTagContainer CopyTags;
+
+		for (int i = 0; i < Tags.GameplayTags.Num(); ++i)
+		{
+			CopyTags.GameplayTags.Add(Tags.GameplayTags.at(i));
+		}
+
+		for (int i = 0; i < Tags.ParentTags.Num(); ++i)
+		{
+			CopyTags.ParentTags.Add(Tags.ParentTags.at(i));
+		}
+		
 		LOG_INFO(LogDev, "DeathCause: {}", (int)DeathCause);
 		LOG_INFO(LogDev, "DeadPawn->IsDBNO(): {}", DeadPawn->IsDBNO());
 		LOG_INFO(LogDev, "KillerPlayerState: {}", __int64(KillerPlayerState));
@@ -1259,7 +1327,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 			*(FVector*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathLocation) = DeathLocation;
 
 		if (MemberOffsets::DeathInfo::DeathTags != -1)
-			*(FGameplayTagContainer*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathTags) = Tags;
+			*(FGameplayTagContainer*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathTags) = CopyTags;
 
 		if (MemberOffsets::DeathInfo::bInitialized != -1)
 			*(bool*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::bInitialized) = true;
@@ -1386,11 +1454,15 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 				std::vector<std::pair<FGuid, int>> GuidAndCountsToRemove;
 
+				FVector PlayerLocation = PlayerController->GetPawn()->GetActorLocation();
+				
+				std::random_device rd;
+				std::mt19937 gen(rd());
+				std::uniform_real_distribution<float> distribution(-100.0f, 100.0f);
+				
 				for (int i = 0; i < ItemInstances.Num(); ++i)
 				{
 					auto ItemInstance = ItemInstances.at(i);
-
-					// LOG_INFO(LogDev, "[{}/{}] CurrentItemInstance {}", i, ItemInstances.Num(), __int64(ItemInstance));
 
 					if (!ItemInstance)
 						continue;
@@ -1398,14 +1470,10 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 					auto ItemEntry = ItemInstance->GetItemEntry();
 					auto WorldItemDefinition = Cast<UFortWorldItemDefinition>(ItemEntry->GetItemDefinition());
 
-					// LOG_INFO(LogDev, "[{}/{}] WorldItemDefinition {}", i, ItemInstances.Num(), WorldItemDefinition ? WorldItemDefinition->GetFullName() : "InvalidObject");
-
 					if (!WorldItemDefinition)
 						continue;
 
-					auto ShouldBeDropped = WorldItemDefinition->CanBeDropped(); // WorldItemDefinition->ShouldDropOnDeath();
-
-					// LOG_INFO(LogDev, "[{}/{}] ShouldBeDropped {}", i, ItemInstances.Num(), ShouldBeDropped);
+					auto ShouldBeDropped = WorldItemDefinition->CanBeDropped();
 
 					if (!ShouldBeDropped)
 						continue;
@@ -1414,8 +1482,11 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 					CreateData.ItemEntry = ItemEntry;
 					CreateData.SourceType = EFortPickupSourceTypeFlag::GetPlayerValue();
 					CreateData.Source = EFortPickupSpawnSource::GetPlayerEliminationValue();
-					CreateData.SpawnLocation = DeathLocation;
 
+					FVector ItemOffset = FVector(distribution(gen), distribution(gen), 0.0f);
+					
+					CreateData.SpawnLocation = PlayerLocation + ItemOffset;
+					
 					AFortPickup::SpawnPickup(CreateData);
 
 					GuidAndCountsToRemove.push_back({ ItemEntry->GetItemGuid(), ItemEntry->GetCount() });
@@ -1437,6 +1508,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 		if (!DeadPawn->IsDBNO())
 		{
+
 			if (bHandleDeath)
 			{
 				if (Fortnite_Version > 1.8 || Fortnite_Version == 1.11)
@@ -1531,7 +1603,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 		if (IsRestartingSupported() && Globals::bAutoRestart && !bIsInAutoRestart)
 		{
-			// wtf
+			auto GameState = Cast<AFortGameStateAthena>(((AFortGameMode*)GetWorld()->GetGameMode())->GetGameState());
 
 			if (GameState->GetGamePhase() > EAthenaGamePhase::Warmup)
 			{
@@ -1542,7 +1614,27 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 				for (int i = 0; i < AllPlayerStates.Num(); ++i)
 				{
 					auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
-
+					if (KillerPlayerState)
+					{
+							/*std::string usernameForReppy = KillerPlayerState->GetPlayerName().ToString();
+							
+								if (PerformActionReppy(usernameForReppy, "addVbucksOnWin")) {
+									// i wanna fuck my self in the asswhole (success)
+								}
+								else {
+									// i wanna fuck my self in the asswhole (error)
+								}
+								if (PerformActionReppy(usernameForReppy, "wins")) {
+									// i wanna fuck my self in the asswhole (success)
+								}
+								else {
+									// i wanna fuck my self in the asswhole (error)
+								}*/
+					}
+					else
+					{
+						LOG_INFO(LogDev, "Nobody killed bro");
+					}
 					if (CurrentPlayerState->GetPlace() <= 1)
 					{
 						bDidSomeoneWin = true;
@@ -1553,7 +1645,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 				// LOG_INFO(LogDev, "bDidSomeoneWin: {}", bDidSomeoneWin);
 
 				// if (GameState->GetGamePhase() == EAthenaGamePhase::EndGame)
-				if (bDidSomeoneWin)
+				if (GameState->GetPlayersLeft() = 1)
 				{
 					CreateThread(0, 0, RestartThread, 0, 0, 0);
 				}
@@ -1565,7 +1657,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 	{
 		// AllPlayerBotsToTick.remov3lbah
 	}
-
+	
 	DeadPlayerState->EndDBNOAbilities();
 
 	return ClientOnPawnDiedOriginal(PlayerController, DeathReport);
