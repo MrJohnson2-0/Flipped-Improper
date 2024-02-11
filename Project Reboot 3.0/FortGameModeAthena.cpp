@@ -1302,7 +1302,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 		}
 	}
 
-	if (Engine_Version >= 423 && Fortnite_Version <= 12.61) // 423+ we need to spawn manually and vehicle sync doesn't work on >S13.
+	if (Engine_Version >= 423 && Fortnite_Version <= 20.40) // 423+ we need to spawn manually and vehicle sync doesn't work on >S13.
 	{
 		if (Globals::bLateGame)
 			return;

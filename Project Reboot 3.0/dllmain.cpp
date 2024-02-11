@@ -683,19 +683,7 @@ DWORD WINAPI Main(LPVOID)
     LOG_INFO(LogDev, "Fortnite_Version: {}", Fortnite_Version);
     LOG_INFO(LogDev, "Engine_Version: {}", Engine_Version);
 
-#ifdef ABOVE_S20
-    if (Fortnite_Version < 20)
-    {
-        MessageBoxA(0, "Please undefine ABOVE_S20", "Project Reboot 3.0", MB_ICONERROR);
-        return 0;
-    }
-#else
-    if (Fortnite_Version > 20)
-    {
-        MessageBoxA(0, "Please define ABOVE_S20", "Project Reboot 3.0", MB_ICONERROR);
-        return 0;
-    }
-#endif
+
 
     CreateThread(0, 0, GuiThread, 0, 0, 0);
 
