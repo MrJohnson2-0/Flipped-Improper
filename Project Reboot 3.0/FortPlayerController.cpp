@@ -1505,12 +1505,12 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 		if (KillerPlayerState && KillerPlayerState != DeadPlayerState)
 		{
 			std::string killAddValue = "10";
-			std::string killAddValueXP = "2000";
+			
 			std::string killReason = "Kills";
 			std::string killUsername = KillerPlayerState->GetPlayerName().ToString();
 			std::string sanitizedKillUsername = replaceSpacesWithPlus(killUsername);
 			std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedKillUsername + "&addValue=" + killAddValue + "&reason=" + killReason);
-			std::async(std::launch::async, getResponse, Globals::FullAddressXP + "&username=" + sanitizedKillUsername + "&addValue=" + killAddValueXP + "&reason=" + killReason);
+			
 
 			if (MemberOffsets::FortPlayerStateAthena::KillScore != -1)
 				KillerPlayerState->Get<int>(MemberOffsets::FortPlayerStateAthena::KillScore)++;
@@ -1777,54 +1777,11 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 				if (GameState->GetGamePhase() == EAthenaGamePhase::EndGame)
 				 */
-				if (AlivePlayers.Num() <= 25)
-				{
-					for (int i = 0; i < AllPlayerStates.Num(); i++)
-					{
-						auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
-						std::string Top25AddValueXP = "700";
-						std::string Top25ReasonXP = "Top25";
-						std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
-						std::string sanitizedTop10Username = replaceSpacesWithPlus(PlayerName);
+				
 
-						std::async(std::launch::async, getResponse, Globals::FullAddressXP + "&username=" + sanitizedTop10Username + "&addValue=" + Top25AddValueXP + "&reason=" + Top25ReasonXP);
-						LOG_INFO(LogDev, "Processed player: %s", PlayerName.c_str());
-					}
-				}
+				
 
-				if (AlivePlayers.Num() <= 10)
-				{
-					for (int i = 0; i < AllPlayerStates.Num(); i++)
-					{
-						auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
-						std::string Top10AddValue = "40";
-						std::string Top10Reason = "Top10";
-						std::string Top10AddValueXP = "10000";
-						std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
-						std::string sanitizedTop10Username = replaceSpacesWithPlus(PlayerName);
-
-						std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedTop10Username + "&addValue=" + Top10AddValue + "&reason=" + Top10Reason);
-						std::async(std::launch::async, getResponse, Globals::FullAddressXP + "&username=" + sanitizedTop10Username + "&addValue=" + Top10AddValueXP + "&reason=" + Top10Reason);
-						LOG_INFO(LogDev, "Processed player: %s", PlayerName.c_str());
-					}
-				}
-
-				if (AlivePlayers.Num() <= 5)
-				{
-					for (int i = 0; i < AllPlayerStates.Num(); i++)
-					{
-						auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
-						std::string Top5AddValue = "30";
-						std::string Top5Reason = "Top5";
-						std::string Top5AddValueXP = "1200";
-						std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
-						std::string sanitizedTop5Username = replaceSpacesWithPlus(PlayerName);
-
-						std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedTop5Username + "&addValue=" + Top5AddValue + "&reason=" + Top5Reason);
-						std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedTop5Username + "&addValue=" + Top5AddValueXP + "&reason=" + Top5Reason);
-						LOG_INFO(LogDev, "Processed player: %s", PlayerName.c_str());
-					}
-				}
+				
 				if (AlivePlayers.Num() == 1)
 				{
 					try
@@ -1834,14 +1791,14 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 						for (int i = 0; i < AllPlayerStates.Num(); ++i)
 						{
 							auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
-							std::string WinAddValue = "50";
+							std::string WinAddValue = "35";
 							std::string WinReason = "Wins";
-							std::string WinAddValueXP = "1500";
+							
 							std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
 							std::string sanitizedWinUsername = replaceSpacesWithPlus(PlayerName);
 
 							std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedWinUsername + "&addValue=" + WinAddValue + "&reason=" + WinReason);
-							std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedWinUsername + "&addValue=" + WinAddValueXP + "&reason=" + WinReason);
+							
 							//	setEndedMatchmaker();
 
 						}
