@@ -1171,6 +1171,8 @@ static inline void MainUI()
 
 				if (!Globals::bSentStarted && Globals::bStarted)
 				{
+					
+					
 					UptimeWebHook.send_status("Match has started", "America", "Battle Royale Solos", GameState->GetPlayersLeft(), 0x2c79f5);
 					PlooshMMSAPI::SetServerStatus("offline");
 					Globals::bSentStarted = true;

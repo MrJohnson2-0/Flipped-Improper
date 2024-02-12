@@ -1,4 +1,47 @@
 #include "commands.h"
+#include "npc.h"
+
+bool Summon(AFortPlayerControllerAthena* PlayerController, std::string Class, int Count)
+{
+	auto Pawn = PlayerController->GetPawn();
+
+	if (!Pawn)
+	{
+		SendMessageToConsole(PlayerController, L"No pawn to spawn class at!");
+		return false;
+	}
+
+	static auto BGAClass = FindObject<UClass>(L"/Script/Engine.BlueprintGeneratedClass");
+	static auto ClassClass = FindObject<UClass>(L"/Script/CoreUObject.Class");
+	auto ClassObj = Class.contains("/Script/") ? FindObject<UClass>(Class, ClassClass) : LoadObject<UClass>(Class, BGAClass); // scuffy
+
+	if (ClassObj)
+	{
+		int AmountSpawned = 0;
+
+		for (int i = 0; i < Count; i++)
+		{
+			auto Loc = Pawn->GetActorLocation();
+			Loc.Z += 1000;
+			auto NewActor = GetWorld()->SpawnActor<AActor>(ClassObj, Loc, FQuat(), FVector(1, 1, 1));
+
+			if (!NewActor)
+			{
+				SendMessageToConsole(PlayerController, L"Failed to spawn an actor!");
+			}
+			else
+			{
+				AmountSpawned++;
+			}
+		}
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 
 void ServerCheatHook(AFortPlayerControllerAthena* PlayerController, FString Msg)
 {
@@ -516,6 +559,185 @@ void ServerCheatHook(AFortPlayerControllerAthena* PlayerController, FString Msg)
 
 			SendMessageToConsole(PlayerController, L"Launched character!");
 		}
+		else if (Command == "npc")
+		{
+			if (NumArgs < 1)
+			{
+				SendMessageToConsole(ReceivingController, L"Please provide an NPC name.");
+				return;
+			}
+
+			std::string npc = GetNPC(Arguments[1]);
+
+			if (Summon(ReceivingController, npc, 1))
+			{
+				SendMessageToConsole(ReceivingController, L"NPC spawned successfully.");
+			}
+			else
+			{
+				SendMessageToConsole(ReceivingController, L"Failed to spawn the NPC, make sure it exists in your fortnite version.");
+			}
+			}
+
+		else if (Command == "weather")
+		{
+			if (NumArgs < 1)
+			{
+				SendMessageToConsole(ReceivingController, L"Please provide a weather condition name.");
+				return;
+			}
+
+			std::string condition = GetWeatherCondition(Arguments[1]);
+
+			if (Summon(ReceivingController, condition, 1))
+			{
+				SendMessageToConsole(ReceivingController, L"Weather condition spawned successfully.");
+			}
+			else
+			{
+				SendMessageToConsole(ReceivingController, L"Failed to spawn the weather condition, make sure your fortnite version is at least 19.01");
+			}
+			}
+		else if (Command == "summon")
+		{
+			if (Arguments.size() <= 1)
+			{
+				SendMessageToConsole(PlayerController, L"Please provide a class!\n");
+				return;
+			}
+
+			auto& ClassName = Arguments[1];
+
+			/* if (ClassName.contains("/Script/"))
+			{
+				SendMessageToConsole(PlayerController, L"For now, we don't allow non-blueprint classes.\n");
+				return;
+			} */
+
+			auto Pawn = ReceivingController->GetPawn();
+
+			if (!Pawn)
+			{
+				SendMessageToConsole(PlayerController, L"No pawn to spawn class at!");
+				return;
+			}
+
+			int Count = 1;
+
+			if (Arguments.size() >= 3)
+			{
+				try { Count = std::stod(Arguments[2]); }
+				catch (...) {}
+			}
+
+			constexpr int Max = 100;
+
+			if (Count > Max)
+			{
+				SendMessageToConsole(PlayerController, (std::wstring(L"You went over the limit! Only spawning ") + std::to_wstring(Max) + L".").c_str());
+				Count = Max;
+			}
+
+			static auto BGAClass = FindObject<UClass>(L"/Script/Engine.BlueprintGeneratedClass");
+			static auto ClassClass = FindObject<UClass>(L"/Script/CoreUObject.Class");
+			auto ClassObj = ClassName.contains("/Script/") ? FindObject<UClass>(ClassName, ClassClass) : LoadObject<UClass>(ClassName, BGAClass); // scuffy
+
+			if (ClassObj)
+			{
+				int AmountSpawned = 0;
+
+				for (int i = 0; i < Count; i++)
+				{
+					auto Loc = Pawn->GetActorLocation();
+					Loc.Z += 1000;
+					auto NewActor = GetWorld()->SpawnActor<AActor>(ClassObj, Loc, FQuat(), FVector(1, 1, 1));
+
+					if (!NewActor)
+					{
+						SendMessageToConsole(PlayerController, L"Failed to spawn an actor!");
+					}
+					else
+					{
+						AmountSpawned++;
+					}
+				}
+
+				SendMessageToConsole(PlayerController, L"Summoned!");
+			}
+			else
+			{
+				SendMessageToConsole(PlayerController, L"Not a valid class!");
+			}
+		}
+		else if (Command == "fly")
+		{
+			auto Pawn = Cast<APawn>(ReceivingController->GetPawn());
+
+			if (!Pawn)
+			{
+				SendMessageToConsole(PlayerController, L"No pawn found!");
+				return;
+			}
+
+			static auto CharMovementOffset = Pawn->GetOffset("CharacterMovement");
+			if (CharMovementOffset != -1)
+			{
+				auto CharMovement = Pawn->Get<UObject*>(CharMovementOffset);
+
+				static auto MovementOffset = CharMovement->GetOffset("MovementMode", false);
+				if (MovementOffset != -1)
+				{
+					uint8_t MovementMode = CharMovement->Get<uint8_t>(MovementOffset);
+					static auto SetMovementModeFn = FindObject<UFunction>(L"/Script/Engine.CharacterMovementComponent.SetMovementMode");
+					uint8_t NewMode = 1;
+					if (MovementMode != 5)
+					{
+						NewMode = 5;
+					}
+					if (SetMovementModeFn)
+					{
+						CharMovement->ProcessEvent(SetMovementModeFn, &NewMode);
+					}
+				}
+				else
+				{
+					SendMessageToConsole(PlayerController, L"Movement mode not found!");
+					return;
+				}
+			}
+			else
+			{
+				SendMessageToConsole(PlayerController, L"Character movement not found!");
+				return;
+			}
+			}
+		else if (Command == "setspeed")
+		{
+			float Speed = 1.0f;
+
+			if (Arguments.size() > 1 && Arguments[1] != " ")
+			{
+				try { Speed = std::stof(Arguments[1]); }
+				catch (...) {}
+			}
+
+			auto Pawn = Cast<APawn>(ReceivingController->GetPawn());
+
+			if (!Pawn)
+			{
+				SendMessageToConsole(PlayerController, L"No pawn to set speed!");
+				return;
+			}
+
+			static auto SetMovementSpeedFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPawn.SetMovementSpeed");
+			SetMovementSpeedFn = SetMovementSpeedFn ? SetMovementSpeedFn : FindObject<UFunction>(L"/Script/FortniteGame.FortPawn.SetMovementSpeedMultiplier"); // extremely clean code that totally works
+			if (!SetMovementSpeedFn)
+			{
+				SendMessageToConsole(PlayerController, L"Function not found!");
+				return;
+			}
+			Pawn->ProcessEvent(SetMovementSpeedFn, &Speed);
+		}
 		else if (Command == "setshield")
 		{
 			auto Pawn = ReceivingController->GetMyFortPawn();
@@ -943,7 +1165,11 @@ cheat destroytarget - Destroys the actor that the player is looking at.
 cheat wipequickbar <Primary|Secondary> <RemoveUndroppables=false> - Wipes the specified quickbar (parameters is not case sensitive).
 cheat wipequickbars <RemoveUndroppables=false> - Wipes primary and secondary quickbar of targeted player (parameter is not case sensitive).
 cheat suicide - Makes targeted player suicide. 
-
+cheat npc <NpcName>
+cheat vehicle <VehicleName>
+cheat weather <WeatherConditionName>
+cheat fly
+cheat setspeed
 If you want to execute a command on a certain player, surround their name (case sensitive) with \, and put the param with their name anywhere. Example: cheat sethealth \Milxnor\ 100
 )";
 

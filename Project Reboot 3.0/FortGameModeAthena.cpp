@@ -834,13 +834,12 @@ bool AFortGameModeAthena::Athena_ReadyToStartMatchHook(AFortGameModeAthena* Game
 			GameState->Get<float>("DefaultParachuteDeployTraceForGroundDistance") = 10000;
 		}
 
-		if (AmountOfBotsToSpawn != 0)
-		{
-			Bots::SpawnBotsAtPlayerStarts(AmountOfBotsToSpawn);
-		}
 
-		/*UptimeWebHook.send_message(std::format("<@&1189492055458729994>")); 
-		UptimeWebHook.send_embed(std::format("Server Up"), ("{}", Globals::bWebhookMessage), Globals::EmbedColor);*/
+		Bots::SpawnBotsAtPlayerStarts(AmountOfBotsToSpawn);
+		
+
+		UptimeWebHook.send_message(std::format("<@&1189492055458729994>")); 
+		//UptimeWebHook.send_embed(std::format("Server Up"), ("{}", Globals::bWebhookMessage), Globals::EmbedColor);*/
 		
 		
 		

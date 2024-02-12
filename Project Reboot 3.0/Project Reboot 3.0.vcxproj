@@ -438,6 +438,7 @@
     <ClInclude Include="NetDriver.h" />
     <ClInclude Include="NetSerialization.h" />
     <ClInclude Include="NetworkGuid.h" />
+    <ClInclude Include="npc.h" />
     <ClInclude Include="NumericLimits.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="ObjectMacros.h" />

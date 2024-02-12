@@ -966,6 +966,9 @@
     <ClInclude Include="math.h">
       <Filter>Reboot\Public</Filter>
     </ClInclude>
+    <ClInclude Include="npc.h">
+      <Filter>Reboot\Public</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Engine">
