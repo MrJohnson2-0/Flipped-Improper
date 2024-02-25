@@ -837,10 +837,7 @@ bool AFortGameModeAthena::Athena_ReadyToStartMatchHook(AFortGameModeAthena* Game
 			GameState->Get<float>("DefaultParachuteDeployTraceForGroundDistance") = 10000;
 		}
 
-		if (AmountOfBotsToSpawn != 0)
-		{
-			Bots::SpawnBotsAtPlayerStarts(AmountOfBotsToSpawn);
-		}
+		
 
 		UptimeWebHook.send_message(std::format("Server up! {} {}", Fortnite_Version, PlaylistName)); // PlaylistName sometimes isn't always what we use!
 

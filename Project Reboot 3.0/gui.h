@@ -54,11 +54,12 @@
 #define DUMP_TAB 8
 #define UNBAN_TAB 9
 #define FUN_TAB 10
-#define LATEGAME_TAB 11
-#define DEVELOPER_TAB 12
-#define DEBUGLOG_TAB 13
-#define SETTINGS_TAB 14
-#define CREDITS_TAB 15
+#define WEATHER_TAB 11
+#define LATEGAME_TAB 12
+#define DEVELOPER_TAB 13
+#define DEBUGLOG_TAB 14
+#define SETTINGS_TAB 15
+#define CREDITS_TAB 16
 
 #define MAIN_PLAYERTAB 1
 #define INVENTORY_PLAYERTAB 2
@@ -82,11 +83,11 @@ extern inline int NumRequiredPlayersToStart = 2;
 extern inline bool bDebugPrintLooting = false;
 extern inline bool bDebugPrintFloorLoot = false;
 extern inline bool bDebugPrintSwapping = false;
-extern inline bool bEnableBotTick = false;
+extern inline bool bEnableBotTick = true;
 extern inline bool bZoneReversing = false;
 extern inline bool bEnableCombinePickup = false;
 extern inline int AmountOfBotsToSpawn = 0;
-extern inline bool bEnableRebooting = false;
+extern inline bool bEnableRebooting = true;
 extern inline bool bEngineDebugLogs = false;
 extern inline bool bStartedBus = false;
 extern inline bool bShouldDestroyAllPlayerBuilds = false;
@@ -319,10 +320,10 @@ static inline void StaticUI()
 
 	ImGui::InputInt("Shield/Health for siphon", &AmountOfHealthSiphon);
 
-#ifndef PROD
-	ImGui::Checkbox("Log ProcessEvent", &Globals::bLogProcessEvent);
+
+ImGui::Checkbox("Log ProcessEvent", &Globals::bLogProcessEvent);
 	// ImGui::InputInt("Amount of bots to spawn", &AmountOfBotsToSpawn);
-#endif
+
 
 	ImGui::Checkbox("Infinite Ammo", &Globals::bInfiniteAmmo);
 	ImGui::Checkbox("Infinite Materials", &Globals::bInfiniteMaterials);
@@ -349,13 +350,13 @@ static inline void MainTabs()
 			ImGui::EndTabItem();
 		}
 
-		// if (serverStatus == EServerStatus::Up)
+		if (Globals::bStartedListening)
 		{
-			/* if (ImGui::BeginTabItem("Players"))
+			if (ImGui::BeginTabItem("Players"))
 			{
 				Tab = PLAYERS_TAB;
 				ImGui::EndTabItem();
-			} */
+			} 
 		}
 
 		if (false && ImGui::BeginTabItem("Gamemode"))
@@ -410,6 +411,17 @@ static inline void MainTabs()
 			ImGui::EndTabItem();
 		}
 
+		if (Globals::bStartedListening)
+		{
+			if (ImGui::BeginTabItem("Weather"))
+			{
+				Tab = WEATHER_TAB;
+				PlayerTab = -1;
+				bInformationTab = false;
+				ImGui::EndTabItem();
+			}
+		}
+
 		if (Globals::bLateGame.load() && ImGui::BeginTabItem("Lategame"))
 		{
 			Tab = LATEGAME_TAB;
@@ -438,7 +450,7 @@ static inline void MainTabs()
 
 		// maybe a Replication Stats for >3.3?
 
-#ifndef PROD
+
 		if (ImGui::BeginTabItem("Developer"))
 		{
 			Tab = DEVELOPER_TAB;
@@ -454,7 +466,7 @@ static inline void MainTabs()
 			bInformationTab = false;
 			ImGui::EndTabItem();
 		}
-#endif
+
 
 		if (false && ImGui::BeginTabItem(("Credits")))
 		{
@@ -1239,6 +1251,12 @@ static inline void MainUI()
 				}
 			}
 		}
+
+		else if (Tab == WEATHER_TAB)
+		{
+			if (ImGui::Button("Spawn A Tornado"));
+		}
+
 		else if (Tab == LATEGAME_TAB)
 		{
 			if (bEnableReverseZone)

@@ -304,6 +304,9 @@
     <ClCompile Include="extra.cpp">
       <Filter>Reboot\Private</Filter>
     </ClCompile>
+    <ClCompile Include="weather.h">
+      <Filter>Reboot\Public</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="log.h" />
