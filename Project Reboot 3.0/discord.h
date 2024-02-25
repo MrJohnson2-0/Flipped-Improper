@@ -69,37 +69,13 @@ public:
 
         return success;
     }
-    inline bool send_status(const std::string& status, const std::string& region, const std::string& gamemode, const std::string& players, int color = 0)
-    {
-        std::string json = "{\"embeds\": [{\"title\": \"Server Status\", "
-            "\"fields\": ["
-            "{\"name\": \"Status\", \"value\": \"" + status + "\", \"inline\": true},"
-            "{\"name\": \"Region\", \"value\": \"" + region + "\", \"inline\": true},"
-            "{\"name\": \"Gamemode\", \"value\": \"" + gamemode + "\", \"inline\": true},"
-            "{\"name\": \"Players\", \"value\": \"" + players + "\", \"inline\": true}"
-            "], \"color\": " + std::to_string(color) + "}]}";
-
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json.c_str());
-
-        bool success = handleCode(curl_easy_perform(curl));
-
-        return success;
-    }
-
-    // Overloaded function to accept int for the "Players" parameter
-    inline bool send_status(const std::string& status, const std::string& region, const std::string& gamemode, int players, int color = 0)
-    {
-        return send_status(status, region, gamemode, std::to_string(players), color);
-    }
 private:
     CURL* curl;
 };
 
 namespace Information
 {
-    static std::string UptimeWebHook = ("https://discord.com/api/webhooks/1189510110763024504/zMHIX0NU8-8pUmE_0--shSUYqGjPbPvf2IONEK0BjCR1Pu-b7J1cnwY7mUq6_98N26qA");
-    static std::string LoggingWebhook = ("");
+    static std::string UptimeWebHook = ("");
 }
 
 static DiscordWebhook UptimeWebHook(Information::UptimeWebHook.c_str());
-static DiscordWebhook LoggingWebhook(Information::LoggingWebhook.c_str());

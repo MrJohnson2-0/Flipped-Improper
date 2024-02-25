@@ -141,7 +141,7 @@ std::pair<std::vector<UFortItem*>, std::vector<UFortItem*>> AFortInventory::AddI
 		{
 			bool AreGadgetsEnabled = Addresses::ApplyGadgetData && Addresses::RemoveGadgetData && Globals::bEnableAGIDs;
 			bool bWasGadget = false;
-
+			
 			if (AreGadgetsEnabled)
 			{
 				if (auto GadgetItemDefinition = Cast<UFortGadgetItemDefinition>(WorldItemDefinition))
@@ -151,11 +151,11 @@ std::pair<std::vector<UFortItem*>, std::vector<UFortItem*>> AFortInventory::AddI
 						FortPlayerController->DropAllItems({ GadgetItemDefinition }, false, false, Fortnite_Version < 7);
 					}
 
-					bool (*ApplyGadgetData)(UFortGadgetItemDefinition * a1, __int64 a2, UFortItem * a3, unsigned __int8 a4) = decltype(ApplyGadgetData)(Addresses::ApplyGadgetData);
+					bool (*ApplyGadgetData)(UFortGadgetItemDefinition* a1, __int64 a2, UFortItem* a3, unsigned __int8 a4) = decltype(ApplyGadgetData)(Addresses::ApplyGadgetData);
 					static auto FortInventoryOwnerInterfaceClass = FindObject<UClass>("/Script/FortniteGame.FortInventoryOwnerInterface");
 					auto Interface = __int64(FortPlayerController->GetInterfaceAddress(FortInventoryOwnerInterfaceClass));
 					bool idktbh = true; // Something to do with durability
-
+					
 					bool DidApplyingGadgetSucceed = ApplyGadgetData(GadgetItemDefinition, Interface, NewItemInstance, idktbh);
 					LOG_INFO(LogDev, "DidApplyingGadgetSucceed: {}", DidApplyingGadgetSucceed);
 					bWasGadget = true;
@@ -299,7 +299,7 @@ bool AFortInventory::RemoveItem(const FGuid& ItemGuid, bool* bShouldUpdate, int 
 		if (bIsFinalStack)
 		{
 			NewCount = NewCount < 0 ? 0 : NewCount; // min(NewCount, 0) or something i forgot // hm?
-
+			
 			if (OldItemCount == 0) // hm?
 				bOverrideChangeStackSize = true;
 		}
@@ -393,7 +393,7 @@ bool AFortInventory::RemoveItem(const FGuid& ItemGuid, bool* bShouldUpdate, int 
 void AFortInventory::SwapItem(const FGuid& ItemGuid, FFortItemEntry* NewItemEntry, int OverrideNewCount, std::pair<FFortItemEntry*, FFortItemEntry*>* outEntries)
 {
 	auto NewCount = OverrideNewCount == -1 ? NewItemEntry->GetCount() : OverrideNewCount;
-
+	
 	auto ItemInstance = FindItemInstance(ItemGuid);
 
 	if (!ItemInstance)
@@ -409,7 +409,7 @@ void AFortInventory::SwapItem(const FGuid& ItemGuid, FFortItemEntry* NewItemEntr
 	static auto FortItemEntrySize = FFortItemEntry::GetStructSize();
 
 	auto& ReplicatedEntries = GetItemList().GetReplicatedEntries();
-
+	
 	for (int i = 0; i < ReplicatedEntries.Num(); i++)
 	{
 		auto& ReplicatedEntry = ReplicatedEntries.At(i, FortItemEntrySize);
@@ -421,7 +421,7 @@ void AFortInventory::SwapItem(const FGuid& ItemGuid, FFortItemEntry* NewItemEntr
 
 			ReplicatedEntry.GetCount() = NewCount;
 			ItemInstance->GetItemEntry()->GetCount() = NewCount;
-
+			
 			if (outEntries)
 				*outEntries = std::make_pair(ItemInstance->GetItemEntry(), &ReplicatedEntry);
 		}
@@ -463,7 +463,7 @@ void AFortInventory::ModifyCount(UFortItem* ItemInstance, int New, bool bRemove,
 	}
 
 	if (outEntries)
-		*outEntries = { ItemInstance->GetItemEntry(), ReplicatedEntry };
+		*outEntries = { ItemInstance->GetItemEntry(), ReplicatedEntry};
 
 	if (bUpdate || !outEntries)
 	{
@@ -489,7 +489,7 @@ UFortItem* AFortInventory::GetPickaxeInstance()
 			return ItemInstance;
 		}
 	}
-
+	
 	return nullptr;
 }
 

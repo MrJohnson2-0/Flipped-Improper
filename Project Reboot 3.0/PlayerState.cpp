@@ -8,7 +8,7 @@ FString& APlayerState::GetSavedNetworkAddress()
 	return Get<FString>(SavedNetworkAddressOffset);
 }
 
-FString& APlayerState::GetPlayerName()
+FString APlayerState::GetPlayerName()
 {
 	static auto GetPlayerNameFn = FindObject<UFunction>(L"/Script/Engine.PlayerState.GetPlayerName");
 
@@ -22,9 +22,6 @@ FString& APlayerState::GetPlayerName()
 	static auto PlayerNameOffset = GetOffset("PlayerName");
 	return Get<FString>(PlayerNameOffset);
 }
-
-
-
 
 int& APlayerState::GetPlayerID()
 {

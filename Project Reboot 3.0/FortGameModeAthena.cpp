@@ -626,13 +626,16 @@ bool AFortGameModeAthena::Athena_ReadyToStartMatchHook(AFortGameModeAthena* Game
 	Actors.Free();
 
 	if (ActorsNum == 0)
+	{
+		// LOG_INFO(LogDev, "No Actors!");
 		return false;
+	}
 	
 	// I don't think this map info check is proper.. We can loop through the Actors in the World's PersistentLevel and check if there is a MapInfo, if there is then we can wait, else don't.
 
 	auto MapInfo = GameState->GetMapInfo();
 
-	if (!MapInfo && Engine_Version >= 421)
+	if (Engine_Version >= 421 && !MapInfo)
 		return false;
 
 	static int LastNum = 1;
@@ -834,15 +837,13 @@ bool AFortGameModeAthena::Athena_ReadyToStartMatchHook(AFortGameModeAthena* Game
 			GameState->Get<float>("DefaultParachuteDeployTraceForGroundDistance") = 10000;
 		}
 
+		if (AmountOfBotsToSpawn != 0)
+		{
+			Bots::SpawnBotsAtPlayerStarts(AmountOfBotsToSpawn);
+		}
 
-		Bots::SpawnBotsAtPlayerStarts(AmountOfBotsToSpawn);
-		
+		UptimeWebHook.send_message(std::format("Server up! {} {}", Fortnite_Version, PlaylistName)); // PlaylistName sometimes isn't always what we use!
 
-		UptimeWebHook.send_message(std::format("<@&1189492055458729994>")); 
-		//UptimeWebHook.send_embed(std::format("Server Up"), ("{}", Globals::bWebhookMessage), Globals::EmbedColor);*/
-		
-		
-		
 		if (std::floor(Fortnite_Version) == 5)
 		{
 			auto NewFn = FindObject<UFunction>(L"/Game/Athena/Prototype/Blueprints/Cube/CUBE.CUBE_C.New");
@@ -1104,23 +1105,9 @@ int AFortGameModeAthena::Athena_PickTeamHook(AFortGameModeAthena* GameMode, uint
 	return NextTeamIndex;
 }
 
-float Shit = AutoBusStartSeconds;
-
-void DelayedAction()
-{
-	// Delay for 15 seconds
-	std::this_thread::sleep_for(std::chrono::seconds(45));
-
-	// After the delay, perform the desired action
-	if (Globals::bLateGame.load())
-	{
-		CreateThread(0, 0, LateGameThread, 0, 0, 0);
-	}
-}
-
 void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena* GameMode, AActor* NewPlayerActor)
 {
-	if (NewPlayerActor == GetLocalPlayerController()) // we don't really need this, but it also functions as a nullptr check usually
+	if (NewPlayerActor == GetLocalPlayerController()) // we dont really need this but it also functions as a nullptr check usually
 		return;
 
 	auto GameState = GameMode->GetGameStateAthena();
@@ -1130,10 +1117,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 
 	LOG_INFO(LogPlayer, "HandleStartingNewPlayer!");
 
-	
-
-
-	/*if (Globals::bAutoRestart)
+	if (Globals::bAutoRestart)
 	{
 		static int LastNum123 = 15;
 
@@ -1141,15 +1125,25 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 		{
 			LastNum123 = Globals::AmountOfListens;
 
-			// Start a separate thread for the delayed action
-			std::thread delayThread(DelayedAction);
+			float Duration = AutoBusStartSeconds;
+			float EarlyDuration = Duration;
 
-			// Detach the thread so it runs independently
-			delayThread.detach();
+			float TimeSeconds = UGameplayStatics::GetTimeSeconds(GetWorld());
 
-			// Continue with other code as needed
+			static auto WarmupCountdownEndTimeOffset = GameState->GetOffset("WarmupCountdownEndTime");
+			static auto WarmupCountdownStartTimeOffset = GameState->GetOffset("WarmupCountdownStartTime");
+			static auto WarmupCountdownDurationOffset = GameMode->GetOffset("WarmupCountdownDuration");
+			static auto WarmupEarlyCountdownDurationOffset = GameMode->GetOffset("WarmupEarlyCountdownDuration");
+
+			GameState->Get<float>(WarmupCountdownEndTimeOffset) = TimeSeconds + Duration;
+			GameMode->Get<float>(WarmupCountdownDurationOffset) = Duration;
+
+			GameState->Get<float>(WarmupCountdownStartTimeOffset) = TimeSeconds;
+			GameMode->Get<float>(WarmupEarlyCountdownDurationOffset) = EarlyDuration;
+
+			LOG_INFO(LogDev, "Auto starting bus in {}.", AutoBusStartSeconds);
 		}
-	}*/
+	}
 
 	// if (Engine_Version < 427)
 	{
@@ -1161,7 +1155,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 
 			// is there spawn percentage for vending machines?
 
-			bool bShouldDestroyVendingMachines = Fortnite_Version < 3.4 || Engine_Version == 424;
+			bool bShouldDestroyVendingMachines = Fortnite_Version < 3.4 || Engine_Version >= 424;
 
 			if (!bShouldDestroyVendingMachines)
 			{
@@ -1227,7 +1221,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 			auto SpawnIsland_FloorLoot = FindObject<UClass>(L"/Game/Athena/Environments/Blueprints/Tiered_Athena_FloorLoot_Warmup.Tiered_Athena_FloorLoot_Warmup_C");
 			auto BRIsland_FloorLoot = FindObject<UClass>(L"/Game/Athena/Environments/Blueprints/Tiered_Athena_FloorLoot_01.Tiered_Athena_FloorLoot_01_C");
 
-			//TArray<AActor*> SpawnIsland_FloorLoot_Actors = UGameplayStatics::GetAllActorsOfClass(GetWorld(), SpawnIsland_FloorLoot);
+			TArray<AActor*> SpawnIsland_FloorLoot_Actors = UGameplayStatics::GetAllActorsOfClass(GetWorld(), SpawnIsland_FloorLoot);
 			TArray<AActor*> BRIsland_FloorLoot_Actors = UGameplayStatics::GetAllActorsOfClass(GetWorld(), BRIsland_FloorLoot);
 
 			auto SpawnIslandTierGroup = UKismetStringLibrary::Conv_StringToName(L"Loot_AthenaFloorLoot_Warmup");
@@ -1238,7 +1232,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 			bool bTest = false;
 			bool bPrintWarmup = bDebugPrintFloorLoot;
 
-			/*for (int i = 0; i < SpawnIsland_FloorLoot_Actors.Num(); i++)
+			for (int i = 0; i < SpawnIsland_FloorLoot_Actors.Num(); i++)
 			{
 				ABuildingContainer* CurrentActor = (ABuildingContainer*)SpawnIsland_FloorLoot_Actors.at(i);
 				auto Location = CurrentActor->GetActorLocation() + CurrentActor->GetActorForwardVector() * CurrentActor->GetLootSpawnLocation_Athena().X + CurrentActor->GetActorRightVector() * CurrentActor->GetLootSpawnLocation_Athena().Y + CurrentActor->GetActorUpVector() * CurrentActor->GetLootSpawnLocation_Athena().Z;
@@ -1261,7 +1255,7 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 				if (!bTest)
 					CurrentActor->K2_DestroyActor();
 			}
-			*/
+
 			bool bPrintIsland = bDebugPrintFloorLoot;
 
 			int spawned = 0;
@@ -1294,18 +1288,15 @@ void AFortGameModeAthena::Athena_HandleStartingNewPlayerHook(AFortGameModeAthena
 					CurrentActor->K2_DestroyActor();
 			}
 
-			//SpawnIsland_FloorLoot_Actors.Free();
+			SpawnIsland_FloorLoot_Actors.Free();
 			BRIsland_FloorLoot_Actors.Free();
 
 			LOG_INFO(LogDev, "Spawned loot!");
 		}
 	}
 
-	if (Engine_Version >= 423 && Fortnite_Version <= 20.40) // 423+ we need to spawn manually and vehicle sync doesn't work on >S13.
+	if (Engine_Version >= 423 && Fortnite_Version <= 12.61) // 423+ we need to spawn manually and vehicle sync doesn't work on >S13.
 	{
-		if (Globals::bLateGame)
-			return;
-
 		static int LastNum420 = 114;
 
 		if (LastNum420 != Globals::AmountOfListens)

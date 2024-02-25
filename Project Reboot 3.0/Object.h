@@ -10,13 +10,6 @@
 class UClass;
 class UFunction;
 
-
-#define INL __forceinline
-
-
-
-
-
 struct FGuid
 {
 	unsigned int A;
@@ -64,9 +57,6 @@ public:
 	std::string GetFullName();
 	UObject* GetOuter() const { return OuterPrivate; }
 	FName GetFName() const { return NamePrivate; }
-
-
-	INL struct UFunction* Function(const std::string& FuncName);
 
 	class UPackage* GetOutermost() const;
 	bool IsA(class UStruct* Other);

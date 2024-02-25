@@ -3,7 +3,7 @@
 #include "UObjectGlobals.h"
 #include "Engine.h"
 // #include "World.h"
-#include "Object.h"
+
 #include "RandomStream.h"
 #include "Class.h"
 #include "globals.h"
@@ -17,11 +17,6 @@
 	FAILED_CREATE_NETDRIVER = 2,
 	FAILED_LISTEN = 3
 }; */
-
-template <typename T>
-T* Get(void* addr, uint64_t off) { return (T*)(__int64(addr) + off); }
-
-#define INL __forceinline
 
 extern inline UObject* (*StaticLoadObjectOriginal)(UClass*, UObject*, const wchar_t* InName, const wchar_t* Filename, uint32_t LoadFlags, UObject* Sandbox, bool bAllowObjectReconciliation) = nullptr;
 
@@ -95,13 +90,6 @@ static inline class UWorld* GetWorld()
 
 	return GameViewport->Get<class UWorld*>(WorldOffset);
 }
-
-
-
-
-
-
-
 
 static TArray<UObject*>& GetLocalPlayers()
 {
@@ -226,11 +214,6 @@ inline void SetBitfield(void* Addr, uint8_t FieldMask, bool NewVal)
 		*(bool*)Bitfield = NewVal;
 }
 
-template <typename MemberType = UObject*>
-INL MemberType* Member(const std::string& MemberName);
-
-
-
 template<typename T = UObject>
 inline std::vector<T*> GetAllObjectsOfClass(UClass* Class)
 {
@@ -262,10 +245,6 @@ inline T* GetRandomObjectOfClass(UClass* Class)
 
 	return AllObjectsVec.size() > 0 ? AllObjectsVec.at(std::rand() % AllObjectsVec.size()) : nullptr;
 }
-
-
-
-
 
 inline void* FindPropertyStruct(const std::string& StructName, const std::string& MemberName, bool bWarnIfNotFound = true)
 {

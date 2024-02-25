@@ -37,9 +37,6 @@ public:
 		return false;
 	}
 
-
-
-
 	bool AddAndCheck(Severity severity)
 	{
 		if (severity == Severity::LOW)

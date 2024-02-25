@@ -83,7 +83,7 @@ static inline uint64 FindStaticFindObject(int StringSkip = 1)
 		{
 			if (Fortnite_Version == 16.50)
 				return Memcury::Scanner::FindPattern("48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 55 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC 60 45 33 ED 45 8A F9 44 38 2D ? ? ? ? 49 8B F8 48 8B F2 4C 8B E1").Get();
-
+		
 			return Memcury::Scanner::FindPattern("40 55 53 57 41 54 41 55 41 57 48 8D AC 24 ? ? ? ? 48 81 EC ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 85").Get();
 		}
 		else
@@ -133,7 +133,7 @@ static inline uint64 FindObjectArray()
 
 	auto cc = Memcury::Scanner::FindPattern("48 8B 05 ? ? ? ? 48 8D 14 C8 EB 03 49 8B D6 8B 42 08 C1 E8 1D A8 01 0F 85 ? ? ? ? F7 86 ? ? ? ? ? ? ? ?", false);
 	auto addr = cc.Get() ? cc.RelativeOffset(3).Get() : 0; // 4.16
-
+	
 	if (!addr)
 	{
 		if (Engine_Version >= 416 || Engine_Version <= 420)
@@ -221,7 +221,7 @@ static inline uint64 FindRebootingDelegate()
 		return 0;
 
 	auto ServerOnAttemptInteractAddr = Memcury::Scanner::FindStringRef(L"[SCM] ABuildingGameplayActorSpawnMachine::ServerOnAttemptInteract - Start Rebooting", true, 0, Fortnite_Version >= 16).Get();
-
+	
 	for (int i = 0; i < 10000; i++)
 	{
 		if ((*(uint8_t*)(uint8_t*)(ServerOnAttemptInteractAddr + i) == 0x48 && *(uint8_t*)(uint8_t*)(ServerOnAttemptInteractAddr + i + 1) == 0x8D
@@ -343,7 +343,7 @@ static inline uint64 FindInitHost()
 	if (Engine_Version == 427) // idk im dumb
 	{
 		auto addr = Memcury::Scanner::FindPattern("48 89 5C 24 ? 48 89 74 24 ? 55 57 41 56 48 8D 6C 24 ? 48 81 EC ? ? ? ? 48 8B F1 4C 8D 05", false).Get();
-
+	
 		if (!addr) // s18
 			addr = Memcury::Scanner::FindPattern("48 8B C4 48 89 58 10 48 89 70 18 48 89 78 20 55 41 56 41 57 48 8D 68 A1 48 81 EC ? ? ? ? 48 8B F1 4C 8D 35 ? ? ? ? 4D").Get();
 
@@ -393,7 +393,7 @@ static inline uint64 FindPauseBeaconRequests()
 
 		if (!addr)
 			addr = Memcury::Scanner::FindPattern("40 53 48 83 EC 30 48 8B D9 84 D2 74 5E 80 3D").Get();
-
+		
 		return addr;
 	}
 
@@ -453,7 +453,7 @@ static inline uint64 FindOnRep_ZiplineState()
 			return Addrr - i;
 		}
 	}
-
+	
 	return 0;
 }
 
@@ -462,13 +462,13 @@ static inline uint64 FindGetMaxTickRate() // UEngine::getmaxtickrate
 	// TODO switch to index maybe?
 
 	/* auto GetMaxTickRateIndex = *Memcury::Scanner::FindStringRef(L"GETMAXTICKRATE")
-		.ScanFor({ 0x4D, 0x8B, 0xC7, 0xE8 })
-		.RelativeOffset(4)
-		.ScanFor({ 0xFF, 0x90 })
-		.AbsoluteOffset(2)
-		.GetAs<int*>() / 8;
+        .ScanFor({ 0x4D, 0x8B, 0xC7, 0xE8 })
+        .RelativeOffset(4)
+        .ScanFor({ 0xFF, 0x90 })
+        .AbsoluteOffset(2)
+        .GetAs<int*>() / 8;
 
-	LOG_INFO(LogHook, "GetMaxTickRateIndex {}", GetMaxTickRateIndex); */
+    LOG_INFO(LogHook, "GetMaxTickRateIndex {}", GetMaxTickRateIndex); */
 
 	if (Engine_Version == 500)
 		return Memcury::Scanner::FindPattern("40 53 48 83 EC 50 0F 29 74 24 ? 48 8B D9 0F 29 7C 24 ? 0F 28 F9 44 0F 29").Get(); // the string is in func + it's in function chunks.
@@ -557,9 +557,9 @@ static inline uint64 FindSetWorld()
 {
 	if (Engine_Version < 426)
 		return Memcury::Scanner::FindStringRef(L"AOnlineBeaconHost::InitHost failed")
-		.ScanFor({ 0x48, 0x8B, 0xD0, 0xE8 }, false)
-		.RelativeOffset(4)
-		.Get(); // THANKS ENDER
+			.ScanFor({ 0x48, 0x8B, 0xD0, 0xE8 }, false)
+			.RelativeOffset(4)
+			.Get(); // THANKS ENDER
 
 	int SetWorldIndex = 0;
 
@@ -582,7 +582,7 @@ static inline uint64 FindSetWorld()
 	return SetWorldIndex;
 }
 
-static inline uint64 FindInitListen()
+static inline uint64 FindInitListen() 
 {
 	if (Engine_Version == 500)
 		return Memcury::Scanner::FindPattern("4C 8B DC 49 89 5B 10 49 89 73 18 57 48 83 EC 50 48 8B BC 24 ?? ?? ?? ?? 49 8B F0 48 8B").Get();
@@ -596,8 +596,8 @@ static inline uint64 FindInitListen()
 
 static inline uint64 FindOnDamageServer()
 {
-	auto Addr = FindFunctionCall(L"OnDamageServer",
-		Engine_Version == 416 ? std::vector<uint8_t>{ 0x4C, 0x89, 0x4C } :
+	auto Addr = FindFunctionCall(L"OnDamageServer", 
+		Engine_Version == 416 ? std::vector<uint8_t>{ 0x4C, 0x89, 0x4C } : 
 		Engine_Version == 419 || Engine_Version >= 427 ? std::vector<uint8_t>{ 0x48, 0x8B, 0xC4 } : std::vector<uint8_t>{ 0x40, 0x55 }
 	);
 
@@ -650,7 +650,7 @@ static inline uint64 FindSpecConstructor()
 	if (Engine_Version == 425)
 	{
 		auto ba = Memcury::Scanner::FindPattern("48 8B 44 24 ? 80 61 29 F8 80 61 31 FE 48 89 41 20 33 C0 89 41", false).Get();
-
+	
 		if (!ba)
 			ba = Memcury::Scanner::FindPattern("48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 41 56 48 83 EC 20 45 33 F6 48 C7 01 ? ? ? ? 48 C7 41").Get(); // i think this right for 12.00 ??
 
@@ -721,9 +721,9 @@ static inline uint64 FindCombinePickupLea() // kill me
 
 	if (!OnRep_PickupLocationDataAddr)
 		return 0; */
-
+	
 	uint64 SetupCombinePickupDelegatesAddr = 0;
-
+	
 	bool bShouldCheckSafety = true;
 
 	if (Engine_Version <= 420)
@@ -788,7 +788,7 @@ static inline uint64 FindCompletePickupAnimation()
 	if (Engine_Version == 427)
 	{
 		auto sig = Memcury::Scanner::FindPattern("48 8B C4 48 89 58 08 48 89 68 10 48 89 70 18 48 89 78 20 41 54 41 56 41 57 48 83 EC 20 48 8B B1 ? ? ? ? 48 8B D9 48 85 F6", false).Get(); // 17.30
-
+	
 		if (!sig)
 			sig = Memcury::Scanner::FindPattern("48 89 5C 24 ? 48 89 74 24 ? 55 57 41 54 48 8D AC 24 ? ? ? ? 48 81 EC ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 48 8B B9 ? ? ? ? 48 8B D9 48 85 FF 74 16 48 89", false).Get(); // 18.40
 
@@ -804,7 +804,7 @@ static inline uint64 FindCompletePickupAnimation()
 
 		if (!addr)
 			addr = Memcury::Scanner::FindPattern("48 8B C4 48 89 58 10 48 89 70 18 48 89 78 20 55 41 54 41 55 41 56 41 57 48 8D A8 ? ? ? ? 48 81 EC ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 48 8B B9 ? ? ? ? 45 33 E4 48 8B D9 48 85 FF 74 0F").Get(); // 20.40
-
+	
 		return addr;
 	}
 
@@ -882,7 +882,7 @@ static inline uint64 FindSetZoneToIndex() // actually StartNewSafeZonePhase
 
 	for (int i = 0; i < 100000; i++)
 	{
-		if ((*(uint8_t*)(uint8_t*)(Addr - i) == 0x40 && *(uint8_t*)(uint8_t*)(Addr - i + 1) == 0x53)
+		if ((*(uint8_t*)(uint8_t*)(Addr - i) == 0x40 && *(uint8_t*)(uint8_t*)(Addr - i + 1) == 0x53) 
 			|| (*(uint8_t*)(uint8_t*)(Addr - i) == 0x40 && *(uint8_t*)(uint8_t*)(Addr - i + 1) == 0x55))
 		{
 			return Addr - i;
@@ -972,7 +972,7 @@ static inline uint64 FindFreeArrayOfEntries()
 
 	if (Engine_Version == 422 || Engine_Version == 423)
 		return Memcury::Scanner::FindPattern("48 83 EC 38 48 89 6C 24 ? 4C 89 74 24 ? 4C 8B F1 48 8B 09 41 8B 6E 08 85 ED 0F 84 ? ? ? ? 48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 48 8D B9").Get(); // 7.30 & 10.40
-
+	
 	return 0;
 }
 
@@ -1040,7 +1040,7 @@ static inline uint64 FindRemoveGadgetData()
 	}
 	else if (Engine_Version == 426)
 		RemoveGadgetDataAddr = Memcury::Scanner::FindPattern("48 85 D2 0F 84 ? ? ? ? 56 41 56 41 57 48 83 EC 30 48 8B 02 48").Get(); // 14.60
-
+	
 	LOG_INFO(LogDev, "RemoveGadgetData: 0x{:x}", RemoveGadgetDataAddr - __int64(GetModuleHandleW(0)));
 
 	if (!RemoveGadgetDataAddr)
@@ -1060,7 +1060,7 @@ static inline uint64 FindRemoveGadgetData()
 
 	if (!FortGadgetItemDefinition_RemoveGadgetDataCall)
 		return FortGadgetItemDefinition_RemoveGadgetDataAddr;
-
+	
 	uint64 AthenaGadgetItemDefinition_RemoveGadgetDataAddr = FindBeginningOfFuncEXP(FortGadgetItemDefinition_RemoveGadgetDataCall);
 
 	if (!AthenaGadgetItemDefinition_RemoveGadgetDataAddr)
@@ -1197,7 +1197,7 @@ static inline uint64 FindTickFlush()
 
 		if (!addr) // s18
 			addr = Memcury::Scanner::FindPattern("48 8B C4 48 89 58 18 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 ? ? ? ? 48 81 EC ? ? ? ? 0F 29 70 B8 0F 29 78 A8 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 44 0F", false).Get();
-
+	
 		if (!addr)
 			addr = Memcury::Scanner::FindPattern("48 8B C4 48 89 58 18 55 56 57 41 54 41 55 41 56 41 57 48 8D A8 ? ? ? ? 48 81 EC ? ? ? ? 0F 29 70 B8 0F 29 78 A8 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 48 8B F9 48 89 4D 38 48 8D 4D 40").Get(); // 16.50
 
@@ -1470,7 +1470,7 @@ static inline uint64 FindGIsClient()
 
 	auto Addr = Memcury::Scanner::FindStringRef(L"AllowCommandletRendering");
 
-	std::vector<std::vector<uint8_t>> BytesArray = { {0x88, 0x05}, {0xC6, 0x05}, {0x88, 0x1D}, {0x44, 0x88} };
+	std::vector<std::vector<uint8_t>> BytesArray = { {0x88, 0x05}, {0xC6, 0x05}, {0x88, 0x1D}, {0x44, 0x88}};
 
 	int Skip = Engine_Version <= 420 ? 1 : 2;
 
@@ -1504,7 +1504,7 @@ static inline uint64 FindGIsClient()
 				{
 					int Relative = Bytes[0] == 0x44 ? 3 : 2;
 					// LOG_INFO(LogDev, "[{}] No Rel 0x{:x} Rel: 0x{:x}", Skip, Memcury::Scanner(Addr.Get() - i).Get() - __int64(GetModuleHandleW(0)), Memcury::Scanner(Addr.Get() - i).RelativeOffset(Relative).Get() - __int64(GetModuleHandleW(0)));
-
+					
 					if (Skip > 0)
 					{
 						Skip--;
@@ -1671,7 +1671,7 @@ static inline uint64 FindInternalTryActivateAbility()
 			return Addrr - i;
 		}
 	}
-
+	
 	return 0;
 	// return FindBytes(Addr, { 0x4C, 0x89, 0x4C }, 1000, 0, true);
 }
@@ -1775,7 +1775,7 @@ static inline uint64 FindGiveAbility()
 }
 
 static inline uint64 FindCantBuild()
-{
+{	
 	auto add = Memcury::Scanner::FindPattern("48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 41 56 48 83 EC ? 49 8B E9 4D 8B F0", false).Get();
 
 	if (!add)
@@ -1808,7 +1808,7 @@ static inline uint64 FindReplaceBuildingActor()
 		return Memcury::Scanner::FindPattern("4C 89 44 24 ? 55 56 57 41 55 41 56 41 57 48 8D AC 24 ? ? ? ? 48 81 EC ? ? ? ? 45").Get(); // 1.7.2 & 2.4.2
 	}
 
-	return FindBytes(StringRef,
+	return FindBytes(StringRef, 
 		(Engine_Version == 420 || Engine_Version == 421 || Engine_Version >= 427 ? std::vector<uint8_t>{ 0x48, 0x8B, 0xC4 } : std::vector<uint8_t>{ 0x4C, 0x8B }),
 		1000, 0, true);
 }
@@ -1863,7 +1863,7 @@ static inline uint64 FindSetChannelActor()
 
 		if (!aa)
 			return Memcury::Scanner::FindPattern("48 8B C4 55 53 48 8D A8 ? ? ? ? 48 81 EC ? ? ? ? 48 89 70 E8 48 8B D9").Get();
-
+		
 		return aa;
 	}
 	if (Fortnite_Version >= 20)

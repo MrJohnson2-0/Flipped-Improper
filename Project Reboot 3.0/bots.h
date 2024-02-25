@@ -89,9 +89,9 @@ public:
 		}
 		else
 		{
-			static int CurrentBotNum = 86;
+			static int CurrentBotNum = 1;
 			auto BotNumWStr = std::to_wstring(CurrentBotNum++);
-			NewName = (L"PEACECONTROLLER" + BotNumWStr).c_str();
+			NewName = (L"RebootBot" + BotNumWStr).c_str();
 		}
 
 		if (auto PlayerController = Cast<APlayerController>(Controller))
@@ -360,7 +360,7 @@ namespace Bots
 
 					CurrentPlayer->ServerPlayEmoteItemHook(CurrentPlayer, RandomDanceID);
 				} */
-			}
+			}	
 
 			if (CurrentPlayerState->IsInAircraft() && !CurrentPlayerState->HasThankedBusDriver())
 			{

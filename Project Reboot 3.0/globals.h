@@ -9,37 +9,20 @@ namespace Globals
 	extern inline bool bCreative = false;
 	extern inline bool bGoingToPlayEvent = false;
 	extern inline bool bEnableAGIDs = true;
-	extern inline bool bNoMCP = false;
-	extern inline bool bStarted = false; // i wanna fuck rep cuz rep is so hot
-	extern inline bool bEnded = false; // i wanna fuck rep cuz rep is so hot
-	extern inline bool bUptime = false; // i wanna fuck rep cuz rep is so hot
-	extern inline bool bSentUptime = false; // i wanna fuck rep cuz rep is so hot
-	extern inline bool bSentEnded = false; // i wanna fuck rep cuz rep is so hot
-	extern inline bool bSentStarted = false; // i wanna fuck rep cuz rep is so hot
-	extern inline bool bPlayerHasJoined = false; // i wanna fuck rep cuz rep is so hot
-	extern inline bool bBuggyAsf = false; // i wanna fuck rep cuz rep is so hot
+	extern inline bool bNoMCP = true;
 	extern inline bool bLogProcessEvent = false;
-
 	// extern inline bool bLateGame = false;
 	extern inline std::atomic<bool> bLateGame(false);
 
 	extern inline bool bInfiniteMaterials = false;
 	extern inline bool bInfiniteAmmo = false;
 
-	extern inline int EmbedColor = 346642;
-
-
-
-	extern inline std::string backendapikey = "Impregnated";
-	extern inline std::string FullAddress = "http://167.114.124.103:3551/api/vbucks?apikey=" + backendapikey; // Set to your backend public ip and port
-	extern inline std::string FullAddressXP = "http://167.114.124.103:3551/api/xp?apikey=" + backendapikey; // Set to your backend public ip and port
-	extern inline std::string bWebhookMessage = "Ready Up Into Flipped";
 	extern inline bool bHitReadyToStartMatch = false;
 	extern inline bool bInitializedPlaylist = false;
 	extern inline bool bStartedListening = false;
-	extern inline bool bAutoRestart = true; // doesnt work fyi
+	extern inline bool bAutoRestart = false; // doesnt work fyi
 	extern inline bool bFillVendingMachines = true;
-	extern inline int AmountOfListens = 0; 
+	extern inline int AmountOfListens = 0; // TODO: Switch to this for LastNum
 }
 
 extern inline int NumToSubtractFromSquadId = 0; // I think 2?

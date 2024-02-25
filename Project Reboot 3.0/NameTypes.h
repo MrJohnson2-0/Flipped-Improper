@@ -3,8 +3,6 @@
 #include "inc.h"
 #include "log.h"
 
-#define INL __forceinline
-
 struct FNameEntryId
 {
 	uint32 Value; // well depends on version if its int32 or uint32 i think
@@ -44,8 +42,6 @@ struct FName
 	FName(uint32 Value) : ComparisonIndex(Value), Number(0) {}
 
 	bool IsValid() { return ComparisonIndex.Value > 0; } // for real
-
-	
 
 	FORCEINLINE bool operator==(const FName& Other) const // HMM??
 	{

@@ -62,10 +62,10 @@ static bool SetNavigationSystem(AAthenaNavSystemConfigOverride* NavSystemOverrid
         return false;
 
     static auto OverridePolicyOffset = NavSystemOverride->GetOffset("OverridePolicy", false);
-
+    
     if (OverridePolicyOffset != -1)
         NavSystemOverride->Get<ENavSystemOverridePolicy>(OverridePolicyOffset) = ENavSystemOverridePolicy::Append;
-
+    
     static auto NavSystemOverride_NavigationSystemConfigOffset = NavSystemOverride->GetOffset("NavigationSystemConfig");
 
     WorldSettings->Get("NavigationSystemConfigOverride") = NavSystemOverride->Get(NavSystemOverride_NavigationSystemConfigOffset);
@@ -173,7 +173,7 @@ static void SetupAIDirector()
         return;
 
     static auto AIDirectorOffset = GameMode->GetOffset("AIDirector");
-
+    
     LOG_INFO(LogDev, "AIDirector Before: {}", __int64(GameMode->Get(AIDirectorOffset)));
 
     if (!GameMode->Get(AIDirectorOffset))
@@ -184,7 +184,7 @@ static void SetupAIDirector()
         LOG_INFO(LogAI, "Successfully spawned AIDirector!");
 
         // we have to set so much more from data tables..
-
+        
         static auto OurEncounterClass = FindObject<UClass>(L"/Script/FortniteGame.FortAIEncounterInfo"); // ???
         static auto BaseEncounterClassOffset = GameMode->Get(AIDirectorOffset)->GetOffset("BaseEncounterClass");
 

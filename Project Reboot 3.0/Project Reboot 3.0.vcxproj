@@ -24,7 +24,6 @@
     <ProjectGuid>{69618184-b9db-4982-b4fe-f83e9bdd0555}</ProjectGuid>
     <RootNamespace>ProjectReboot30</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>Def not Improper</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -407,7 +406,6 @@
     <ClInclude Include="GenericPlatformTime.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="gui.h" />
-    <ClInclude Include="helper.h" />
     <ClInclude Include="hooking.h" />
     <ClInclude Include="IdentityFunctor.h" />
     <ClInclude Include="inc.h" />
@@ -430,7 +428,6 @@
     <ClInclude Include="LevelStreamingDynamic.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="Map.h" />
-    <ClInclude Include="math.h" />
     <ClInclude Include="MegaStormManager.h" />
     <ClInclude Include="MemoryOps.h" />
     <ClInclude Include="moderation.h" />
@@ -438,7 +435,6 @@
     <ClInclude Include="NetDriver.h" />
     <ClInclude Include="NetSerialization.h" />
     <ClInclude Include="NetworkGuid.h" />
-    <ClInclude Include="npc.h" />
     <ClInclude Include="NumericLimits.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="ObjectMacros.h" />

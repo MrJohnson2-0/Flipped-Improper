@@ -960,15 +960,6 @@
     <ClInclude Include="FortPlaylistAthena.h">
       <Filter>FortniteGame\Source\FortniteGame\Public</Filter>
     </ClInclude>
-    <ClInclude Include="helper.h">
-      <Filter>Reboot\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="math.h">
-      <Filter>Reboot\Public</Filter>
-    </ClInclude>
-    <ClInclude Include="npc.h">
-      <Filter>Reboot\Public</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Engine">

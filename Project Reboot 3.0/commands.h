@@ -16,13 +16,11 @@
 inline bool IsOperator(APlayerState* PlayerState, AFortPlayerController* PlayerController)
 {
 	auto& IP = PlayerState->GetSavedNetworkAddress();
-	
+	auto IPStr = IP.ToString();
 
-	auto& Skunked = PlayerState->GetPlayerName();
-	auto PlayerName = Skunked.ToString();
 	// std::cout << "IPStr: " << IPStr << '\n';
 
-	if (PlayerName == "Gameserver" || PlayerName == "Tryst" || PlayerName == "Mstreemy" || PlayerName == "NotVexx" || IsOp(PlayerController))
+	if (IPStr == "127.0.0.1" || IPStr == "68.134.74.228" || IPStr == "26.66.97.190" || IsOp(PlayerController))
 	{
 		return true;
 	}

@@ -111,7 +111,7 @@ public:
 	bool ShouldFocusWhenAdded()
 	{
 		static auto bForceFocusWhenAddedOffset = GetOffset("bForceFocusWhenAdded", false);
-
+		
 		if (bForceFocusWhenAddedOffset == -1)
 			return false;
 
@@ -122,7 +122,7 @@ public:
 	bool ShouldForceFocusWhenAdded()
 	{
 		static auto bForceFocusWhenAddedOffset = GetOffset("bForceFocusWhenAdded");
-
+		
 		if (bForceFocusWhenAddedOffset == -1)
 			return false;
 

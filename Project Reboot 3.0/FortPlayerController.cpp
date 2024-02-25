@@ -6,8 +6,6 @@
 
 #include "FortPlayerState.h"
 #include "BuildingWeapons.h"
-#include <curl/curl.h>
-
 
 #include "ActorComponent.h"
 #include "FortPlayerStateAthena.h"
@@ -24,25 +22,23 @@
 #include "vendingmachine.h"
 #include "KismetSystemLibrary.h"
 #include "gui.h"
-
 #include "FortAthenaMutator_InventoryOverride.h"
 #include "FortAthenaMutator_TDM.h"
-#include <future>
 
 void AFortPlayerController::ClientReportDamagedResourceBuilding(ABuildingSMActor* BuildingSMActor, EFortResourceType PotentialResourceType, int PotentialResourceCount, bool bDestroyed, bool bJustHitWeakspot)
 {
 	static auto fn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerController.ClientReportDamagedResourceBuilding");
 
 	struct { ABuildingSMActor* BuildingSMActor; EFortResourceType PotentialResourceType; int PotentialResourceCount; bool bDestroyed; bool bJustHitWeakspot; }
-	AFortPlayerController_ClientReportDamagedResourceBuilding_Params{ BuildingSMActor, PotentialResourceType, PotentialResourceCount, bDestroyed, bJustHitWeakspot };
+	AFortPlayerController_ClientReportDamagedResourceBuilding_Params{BuildingSMActor, PotentialResourceType, PotentialResourceCount, bDestroyed, bJustHitWeakspot};
 
 	this->ProcessEvent(fn, &AFortPlayerController_ClientReportDamagedResourceBuilding_Params);
 }
 
 void AFortPlayerController::ClientEquipItem(const FGuid& ItemGuid, bool bForceExecution)
 {
-	static auto ClientEquipItemFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ClientEquipItem")
-		? FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ClientEquipItem")
+	static auto ClientEquipItemFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ClientEquipItem") 
+		? FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ClientEquipItem") 
 		: FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerController.ClientEquipItem");
 
 	if (ClientEquipItemFn)
@@ -116,7 +112,7 @@ void AFortPlayerController::DropAllItems(const std::vector<UFortItemDefinition*>
 
 		if (bRemoveIfNotDroppable && !WorldItemDefinition->CanBeDropped())
 			continue;
-
+	
 		PickupCreateData CreateData;
 		CreateData.ItemEntry = ItemEntry;
 		CreateData.SpawnLocation = Location;
@@ -151,7 +147,7 @@ void AFortPlayerController::ApplyCosmeticLoadout()
 	{
 		if (Addresses::ApplyCharacterCustomization)
 		{
-			static void* (*ApplyCharacterCustomizationOriginal)(AFortPlayerState * a1, AFortPawn * a3) = decltype(ApplyCharacterCustomizationOriginal)(Addresses::ApplyCharacterCustomization);
+			static void* (*ApplyCharacterCustomizationOriginal)(AFortPlayerState* a1, AFortPawn* a3) = decltype(ApplyCharacterCustomizationOriginal)(Addresses::ApplyCharacterCustomization);
 			ApplyCharacterCustomizationOriginal(PlayerStateAsFort, PawnAsFort);
 
 			PlayerStateAsFort->ForceNetUpdate();
@@ -239,7 +235,7 @@ void AFortPlayerController::ServerLoadingScreenDroppedHook(UObject* Context, FFr
 
 void AFortPlayerController::ServerRepairBuildingActorHook(AFortPlayerController* PlayerController, ABuildingSMActor* BuildingActorToRepair)
 {
-	if (!BuildingActorToRepair
+	if (!BuildingActorToRepair 
 		// || !BuildingActorToRepair->GetWorld()
 		)
 		return;
@@ -433,6 +429,9 @@ void AFortPlayerController::ServerAttemptInteractHook(UObject* Context, FFrame* 
 	static auto ReceivingActorOffset = FindOffsetStruct(StructName, "ReceivingActor");
 	auto ReceivingActor = *(AActor**)(__int64(Params) + ReceivingActorOffset);
 
+	static auto InteractionBeingAttemptedOffset = FindOffsetStruct(StructName, "InteractionBeingAttempted");
+	auto InteractionBeingAttempted = *(EInteractionBeingAttempted*)(__int64(Params) + InteractionBeingAttemptedOffset);
+	
 	// LOG_INFO(LogInteraction, "ReceivingActor: {}", __int64(ReceivingActor));
 
 	if (!ReceivingActor)
@@ -450,7 +449,7 @@ void AFortPlayerController::ServerAttemptInteractHook(UObject* Context, FFrame* 
 		static auto bAlreadySearchedOffset = BuildingContainer->GetOffset("bAlreadySearched");
 		static auto SearchBounceDataOffset = BuildingContainer->GetOffset("SearchBounceData");
 		static auto bAlreadySearchedFieldMask = GetFieldMask(BuildingContainer->GetProperty("bAlreadySearched"));
-
+		
 		auto SearchBounceData = BuildingContainer->GetPtr<void>(SearchBounceDataOffset);
 
 		if (BuildingContainer->ReadBitfieldValue(bAlreadySearchedOffset, bAlreadySearchedFieldMask))
@@ -476,7 +475,7 @@ void AFortPlayerController::ServerAttemptInteractHook(UObject* Context, FFrame* 
 	{
 		auto Vehicle = (AFortAthenaVehicle*)ReceivingActor;
 		ServerAttemptInteractOriginal(Context, Stack, Ret);
-
+		
 		if (!AreVehicleWeaponsEnabled())
 			return;
 
@@ -553,83 +552,179 @@ void AFortPlayerController::ServerAttemptInteractHook(UObject* Context, FFrame* 
 	}
 	else if (ReceivingActor->IsA(BuildingItemCollectorActorClass))
 	{
-		auto WorldInventory = PlayerController->GetWorldInventory();
-
-		if (!WorldInventory)
-			return ServerAttemptInteractOriginal(Context, Stack, Ret);
-
-		auto ItemCollector = ReceivingActor;
-		static auto ActiveInputItemOffset = ItemCollector->GetOffset("ActiveInputItem");
-		auto CurrentMaterial = ItemCollector->Get<UFortWorldItemDefinition*>(ActiveInputItemOffset); // InteractType->OptionalObjectData
-
-		if (!CurrentMaterial)
-			return ServerAttemptInteractOriginal(Context, Stack, Ret);
-
-		int Index = 0;
-
-		// this is a weird way of getting the current item collection we are on.
-
-		static auto StoneItemData = FindObject<UFortResourceItemDefinition>(L"/Game/Items/ResourcePickups/StoneItemData.StoneItemData");
-		static auto MetalItemData = FindObject<UFortResourceItemDefinition>(L"/Game/Items/ResourcePickups/MetalItemData.MetalItemData");
-
-		if (CurrentMaterial == StoneItemData)
-			Index = 1;
-		else if (CurrentMaterial == MetalItemData)
-			Index = 2;
-
-		static auto ItemCollectionsOffset = ItemCollector->GetOffset("ItemCollections");
-		auto& ItemCollections = ItemCollector->Get<TArray<FCollectorUnitInfo>>(ItemCollectionsOffset);
-
-		auto ItemCollection = ItemCollections.AtPtr(Index, FCollectorUnitInfo::GetPropertiesSize());
-
-		if (Fortnite_Version < 8.10)
+		if (Engine_Version >= 424 && Fortnite_Version < 15 && ReceivingActor->GetFullName().contains("Wumba"))
 		{
-			auto Cost = ItemCollection->GetInputCount()->GetValue();
-
-			if (!CurrentMaterial)
-				return ServerAttemptInteractOriginal(Context, Stack, Ret);
-
-			auto MatInstance = WorldInventory->FindItemInstance(CurrentMaterial);
-
-			if (!MatInstance)
-				return ServerAttemptInteractOriginal(Context, Stack, Ret);
-
+			bool bIsSidegrading = InteractionBeingAttempted == EInteractionBeingAttempted::SecondInteraction ? true : false;
+	
+			LOG_INFO(LogDev, "bIsSidegrading: {}", (bool)bIsSidegrading);
+	
+			struct FWeaponUpgradeItemRow
+			{
+				void* FTableRowBaseInheritance;
+				UFortWeaponItemDefinition*		  CurrentWeaponDef;                                  // 0x8(0x8)(Edit, ZeroConstructor, DisableEditOnInstance, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+				UFortWeaponItemDefinition*		  UpgradedWeaponDef;                                 // 0x10(0x8)(Edit, ZeroConstructor, DisableEditOnInstance, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+				EFortWeaponUpgradeCosts           WoodCost;                                          // 0x18(0x1)(Edit, ZeroConstructor, DisableEditOnInstance, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+				EFortWeaponUpgradeCosts           MetalCost;                                         // 0x19(0x1)(Edit, ZeroConstructor, DisableEditOnInstance, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+				EFortWeaponUpgradeCosts           BrickCost;                                         // 0x1A(0x1)(Edit, ZeroConstructor, DisableEditOnInstance, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+				EFortWeaponUpgradeDirection       Direction;
+			};
+	
+			static auto WumbaDataTable = FindObject<UDataTable>("/Game/Items/Datatables/AthenaWumbaData.AthenaWumbaData");
+	
+			static auto LootPackagesRowMap = WumbaDataTable->GetRowMap();
+	
+			auto Pawn = Cast<AFortPawn>(PlayerController->GetPawn());
+			auto CurrentHeldWeapon = Pawn->GetCurrentWeapon();
+			auto CurrentHeldWeaponDef = CurrentHeldWeapon->GetWeaponData();
+	
+			auto Direction = bIsSidegrading ? EFortWeaponUpgradeDirection::Horizontal : EFortWeaponUpgradeDirection::Vertical;
+	
+			LOG_INFO(LogDev, "Direction: {}", (int)Direction);
+	
+			FWeaponUpgradeItemRow* FoundRow = nullptr;
+	
+			for (int i = 0; i < LootPackagesRowMap.Pairs.Elements.Data.Num(); i++)
+			{
+				auto& Pair = LootPackagesRowMap.Pairs.Elements.Data.at(i).ElementData.Value;
+				auto First = Pair.First;
+				auto Row = (FWeaponUpgradeItemRow*)Pair.Second;
+	
+				if (Row->CurrentWeaponDef == CurrentHeldWeaponDef && Row->Direction == Direction)
+				{
+					FoundRow = Row;
+					break;
+				}
+			}
+	
+			if (!FoundRow)
+			{
+				LOG_WARN(LogGame, "Failed to find row!");
+				return;
+			}
+	
+			auto NewDefinition = FoundRow->UpgradedWeaponDef;
+	
+			LOG_INFO(LogDev, "UpgradedWeaponDef: {}", NewDefinition->GetFullName());
+	
+			int WoodCost = (int)FoundRow->WoodCost * 50;
+			int StoneCost = (int)FoundRow->BrickCost * 50 - 400;
+			int MetalCost = (int)FoundRow->MetalCost * 50 - 200;
+	
+			if (bIsSidegrading)
+			{
+				WoodCost = 20;
+				StoneCost = 20;
+				MetalCost = 20;
+			}
+	
+			static auto WoodItemData = FindObject<UFortItemDefinition>("/Game/Items/ResourcePickups/WoodItemData.WoodItemData");
+			static auto StoneItemData = FindObject<UFortItemDefinition>("/Game/Items/ResourcePickups/StoneItemData.StoneItemData");
+			static auto MetalItemData = FindObject<UFortItemDefinition>("/Game/Items/ResourcePickups/MetalItemData.MetalItemData");
+	
+			auto WorldInventory = PlayerController->GetWorldInventory();
+	
+			auto WoodInstance = WorldInventory->FindItemInstance(WoodItemData);
+			auto WoodCount = WoodInstance->GetItemEntry()->GetCount();
+	
+			auto StoneInstance = WorldInventory->FindItemInstance(StoneItemData);
+			auto StoneCount = StoneInstance->GetItemEntry()->GetCount();
+	
+			auto MetalInstance = WorldInventory->FindItemInstance(MetalItemData);
+			auto MetalCount = MetalInstance->GetItemEntry()->GetCount();
+	
 			bool bShouldUpdate = false;
-
-			if (!WorldInventory->RemoveItem(MatInstance->GetItemEntry()->GetItemGuid(), &bShouldUpdate, Cost, true))
-				return ServerAttemptInteractOriginal(Context, Stack, Ret);
-
+	
+			WorldInventory->RemoveItem(WoodInstance->GetItemEntry()->GetItemGuid(), &bShouldUpdate, WoodCost);
+			WorldInventory->RemoveItem(StoneInstance->GetItemEntry()->GetItemGuid(), &bShouldUpdate, StoneCost);
+			WorldInventory->RemoveItem(MetalInstance->GetItemEntry()->GetItemGuid(), &bShouldUpdate, MetalCost);
+	
+			WorldInventory->RemoveItem(CurrentHeldWeapon->GetItemEntryGuid(), &bShouldUpdate, 1, true);
+	
+			WorldInventory->AddItem(NewDefinition, &bShouldUpdate);
+	
 			if (bShouldUpdate)
 				WorldInventory->Update();
 		}
-
-		for (int z = 0; z < ItemCollection->GetOutputItemEntry()->Num(); z++)
+		else
 		{
-			auto Entry = ItemCollection->GetOutputItemEntry()->AtPtr(z, FFortItemEntry::GetStructSize());
-
-			PickupCreateData CreateData;
-			CreateData.ItemEntry = FFortItemEntry::MakeItemEntry(Entry->GetItemDefinition(), Entry->GetCount(), Entry->GetLoadedAmmo(), MAX_DURABILITY, Entry->GetLevel());
-			CreateData.SpawnLocation = LocationToSpawnLoot;
-			CreateData.PawnOwner = PlayerController->GetMyFortPawn(); // hmm
-			CreateData.bShouldFreeItemEntryWhenDeconstructed = true;
-
-			AFortPickup::SpawnPickup(CreateData);
-		}
-
-		static auto bCurrentInteractionSuccessOffset = ItemCollector->GetOffset("bCurrentInteractionSuccess", false);
-
-		if (bCurrentInteractionSuccessOffset != -1)
-		{
-			static auto bCurrentInteractionSuccessFieldMask = GetFieldMask(ItemCollector->GetProperty("bCurrentInteractionSuccess"));
-			ItemCollector->SetBitfieldValue(bCurrentInteractionSuccessOffset, bCurrentInteractionSuccessFieldMask, true); // idek if this is needed
-		}
-
-		static auto DoVendDeath = FindObject<UFunction>(L"/Game/Athena/Items/Gameplay/VendingMachine/B_Athena_VendingMachine.B_Athena_VendingMachine_C.DoVendDeath");
-
-		if (DoVendDeath)
-		{
-			ItemCollector->ProcessEvent(DoVendDeath);
-			ItemCollector->K2_DestroyActor();
+			auto WorldInventory = PlayerController->GetWorldInventory();
+	
+			if (!WorldInventory)
+				return ServerAttemptInteractOriginal(Context, Stack, Ret);
+	
+			auto ItemCollector = ReceivingActor;
+			static auto ActiveInputItemOffset = ItemCollector->GetOffset("ActiveInputItem");
+			auto CurrentMaterial = ItemCollector->Get<UFortWorldItemDefinition*>(ActiveInputItemOffset); // InteractType->OptionalObjectData
+	
+			if (!CurrentMaterial)
+				return ServerAttemptInteractOriginal(Context, Stack, Ret);
+	
+			int Index = 0;
+	
+			// this is a weird way of getting the current item collection we are on.
+	
+			static auto StoneItemData = FindObject<UFortResourceItemDefinition>(L"/Game/Items/ResourcePickups/StoneItemData.StoneItemData");
+			static auto MetalItemData = FindObject<UFortResourceItemDefinition>(L"/Game/Items/ResourcePickups/MetalItemData.MetalItemData");
+	
+			if (CurrentMaterial == StoneItemData)
+				Index = 1;
+			else if (CurrentMaterial == MetalItemData)
+				Index = 2;
+	
+			static auto ItemCollectionsOffset = ItemCollector->GetOffset("ItemCollections");
+			auto& ItemCollections = ItemCollector->Get<TArray<FCollectorUnitInfo>>(ItemCollectionsOffset);
+	
+			auto ItemCollection = ItemCollections.AtPtr(Index, FCollectorUnitInfo::GetPropertiesSize());
+	
+			if (Fortnite_Version < 8.10)
+			{
+				auto Cost = ItemCollection->GetInputCount()->GetValue();
+	
+				if (!CurrentMaterial)
+					return ServerAttemptInteractOriginal(Context, Stack, Ret);
+	
+				auto MatInstance = WorldInventory->FindItemInstance(CurrentMaterial);
+	
+				if (!MatInstance)
+					return ServerAttemptInteractOriginal(Context, Stack, Ret);
+	
+				bool bShouldUpdate = false;
+	
+				if (!WorldInventory->RemoveItem(MatInstance->GetItemEntry()->GetItemGuid(), &bShouldUpdate, Cost, true))
+					return ServerAttemptInteractOriginal(Context, Stack, Ret);
+	
+				if (bShouldUpdate)
+					WorldInventory->Update();
+			}
+	
+			for (int z = 0; z < ItemCollection->GetOutputItemEntry()->Num(); z++)
+			{
+				auto Entry = ItemCollection->GetOutputItemEntry()->AtPtr(z, FFortItemEntry::GetStructSize());
+	
+				PickupCreateData CreateData;
+				CreateData.ItemEntry = FFortItemEntry::MakeItemEntry(Entry->GetItemDefinition(), Entry->GetCount(), Entry->GetLoadedAmmo(), MAX_DURABILITY, Entry->GetLevel());
+				CreateData.SpawnLocation = LocationToSpawnLoot;
+				CreateData.PawnOwner = PlayerController->GetMyFortPawn(); // hmm
+				CreateData.bShouldFreeItemEntryWhenDeconstructed = true;
+	
+				AFortPickup::SpawnPickup(CreateData);
+			}
+	
+			static auto bCurrentInteractionSuccessOffset = ItemCollector->GetOffset("bCurrentInteractionSuccess", false);
+	
+			if (bCurrentInteractionSuccessOffset != -1)
+			{
+				static auto bCurrentInteractionSuccessFieldMask = GetFieldMask(ItemCollector->GetProperty("bCurrentInteractionSuccess"));
+				ItemCollector->SetBitfieldValue(bCurrentInteractionSuccessOffset, bCurrentInteractionSuccessFieldMask, true); // idek if this is needed
+			}
+	
+			static auto DoVendDeath = FindObject<UFunction>(L"/Game/Athena/Items/Gameplay/VendingMachine/B_Athena_VendingMachine.B_Athena_VendingMachine_C.DoVendDeath");
+	
+			if (DoVendDeath)
+			{
+				ItemCollector->ProcessEvent(DoVendDeath);
+				ItemCollector->K2_DestroyActor();
+			}
 		}
 	}
 
@@ -712,7 +807,7 @@ void AFortPlayerController::ServerAttemptAircraftJumpHook(AFortPlayerController*
 	if (NewPawnAsFort)
 	{
 		NewPawnAsFort->SetHealth(100); // needed with server restart player?
-
+		
 		if (Globals::bLateGame)
 		{
 			NewPawnAsFort->SetShield(100);
@@ -932,7 +1027,7 @@ AActor* AFortPlayerController::SpawnToyInstanceHook(UObject* Context, FFrame* St
 
 	static auto ActiveToyInstancesOffset = PlayerController->GetOffset("ActiveToyInstances");
 	auto& ActiveToyInstances = PlayerController->Get<TArray<AActor*>>(ActiveToyInstancesOffset);
-
+	
 	static auto ToySummonCountsOffset = PlayerController->GetOffset("ToySummonCounts");
 	auto& ToySummonCounts = PlayerController->Get<TMap<UClass*, int>>(ToySummonCountsOffset);
 
@@ -1118,7 +1213,7 @@ void AFortPlayerController::ServerPlayEmoteItemHook(AFortPlayerController* Playe
 	if (!Spec)
 		return;
 
-	static unsigned int* (*GiveAbilityAndActivateOnce)(UAbilitySystemComponent * ASC, int* outHandle, __int64 Spec, FGameplayEventData * TriggerEventData) = decltype(GiveAbilityAndActivateOnce)(Addresses::GiveAbilityAndActivateOnce); // EventData is only on ue500?
+	static unsigned int* (*GiveAbilityAndActivateOnce)(UAbilitySystemComponent* ASC, int* outHandle, __int64 Spec, FGameplayEventData* TriggerEventData) = decltype(GiveAbilityAndActivateOnce)(Addresses::GiveAbilityAndActivateOnce); // EventData is only on ue500?
 
 	if (GiveAbilityAndActivateOnce)
 	{
@@ -1173,11 +1268,11 @@ uint8 ToDeathCause(const FGameplayTagContainer& TagContainer, bool bWasDBNO = fa
 
 	if (Engine_Version == 419)
 	{
-		static uint8(*sub_7FF7AB499410)(AFortPawn * Pawn, FGameplayTagContainer TagContainer, char bWasDBNOIg) = decltype(sub_7FF7AB499410)(Addr);
+		static uint8(*sub_7FF7AB499410)(AFortPawn* Pawn, FGameplayTagContainer TagContainer, char bWasDBNOIg) = decltype(sub_7FF7AB499410)(Addr);
 		return sub_7FF7AB499410(Pawn, TagContainer, bWasDBNO);
 	}
 
-	static uint8(*sub_7FF7AB499410)(FGameplayTagContainer TagContainer, char bWasDBNOIg) = decltype(sub_7FF7AB499410)(Addr);
+	static uint8 (*sub_7FF7AB499410)(FGameplayTagContainer TagContainer, char bWasDBNOIg) = decltype(sub_7FF7AB499410)(Addr);
 	return sub_7FF7AB499410(TagContainer, bWasDBNO);
 }
 
@@ -1202,14 +1297,6 @@ DWORD WINAPI SpectateThread(LPVOID PC)
 	return 0;
 }
 
-
-
-
-
-
-
-
-
 DWORD WINAPI RestartThread(LPVOID)
 {
 	// We should probably use unreal engine's timing system for this.
@@ -1228,211 +1315,6 @@ DWORD WINAPI RestartThread(LPVOID)
 
 	return 0;
 }
-
-
-std::string getResponse(std::string url)
-{
-
-	// Initialize libcurl
-	curl_global_init(CURL_GLOBAL_ALL);
-	CURL* curl = curl_easy_init();
-	if (!curl) {
-		fprintf(stderr, "Failed to initialize libcurl.\n");
-		curl_global_cleanup();
-	}
-
-	// Set URL to API endpoint
-	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-
-
-	// Set callback function for response body
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-
-	// Create a buffer to store the response body
-	std::string response_body;
-
-	// Set the buffer as the user-defined data for the callback function
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
-
-	// Perform HTTP request
-	CURLcode res = curl_easy_perform(curl);
-
-	if (res != CURLE_OK) {
-		fprintf(stderr, "Failed to perform HTTP request: %s\n", curl_easy_strerror(res));
-		curl_easy_cleanup(curl);
-		curl_global_cleanup();
-		return "failure";
-	}
-
-	// Check HTTP response code
-	long response_code;
-	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-	if (response_code >= 200 && response_code < 300) {
-		// HTTP request successful, check response body
-		curl_easy_cleanup(curl);
-		curl_global_cleanup();
-		return response_body;
-
-	}
-	else {
-		// HTTP request failed
-		fprintf(stderr, "HTTP request failed with status code %ld.\n", response_code);
-		curl_easy_cleanup(curl);
-		curl_global_cleanup();
-		return "failure";
-	}
-}
-
-/*
-int setEndedMatchmaker() {
-	CURL* curl;
-	CURLcode res;
-
-	// Initialize the curl session
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-	curl = curl_easy_init();
-
-	std::string serverId = "";
-
-	if (PlaylistName == "/Game/Athena/Playlists/Playlist_DefaultSolo.Playlist_DefaultSolo") {
-		Globals::PlaylistName = "Playlist_DefaultSolo";
-		serverId = "2";
-	}
-	else if (PlaylistName == "/Game/Athena/Playlists/Playlist_DefaultDuo.Playlist_DefaultDuo") {
-		Globals::PlaylistName = "Playlist_DefaultDuo";
-		serverId = "3";
-	}
-	else if (PlaylistName == "/Game/Athena/Playlists/Low/Playlist_Low_Solo.Playlist_Low_Solo") {
-		Globals::PlaylistName = "Playlist_Low_Solo";
-		serverId = "4";
-	}
-	else if (PlaylistName == "/Game/Athena/Playlists/Low/Playlist_Low_Duos.Playlist_Low_Duos") {
-		Globals::PlaylistName = "Playlist_Low_Duos";
-		serverId = "6";
-	}
-
-
-	if (curl) {
-		// Set the URL to which you want to send the request
-		std::string url = "http://141.144.236.205:5051/api/v1/server/status/" + serverId + "/gameended";
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-
-
-		std::string postData = "x-api-key: " + Globals::ApiKey;
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
-
-
-		// Set the custom header
-		std::string headerValue = "x-api-key: " + Globals::ApiKey;
-		struct curl_slist* headers = NULL;
-		headers = curl_slist_append(headers, headerValue.c_str());
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-
-		// Set the response callback function
-		std::string response;
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-		// Perform the request
-		res = curl_easy_perform(curl);
-
-		// Check for errors
-		if (res != CURLE_OK) {
-			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-		}
-		else {
-			// Request successful, handle the response
-			std::cout << "Response: " << response << std::endl;
-		}
-
-		// Clean up
-		curl_easy_cleanup(curl);
-		curl_global_cleanup();
-	}
-}
-
-int setOfflineMatchmaker() {
-	CURL* curl;
-	CURLcode res;
-
-	// Initialize the curl session
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-	curl = curl_easy_init();
-
-	std::string serverId = "";
-
-	if (PlaylistName == "/Game/Athena/Playlists/Playlist_DefaultSolo.Playlist_DefaultSolo") {
-		Globals::PlaylistName = "Playlist_DefaultSolo";
-		serverId = "2";
-	}
-	else if (PlaylistName == "/Game/Athena/Playlists/Playlist_DefaultDuo.Playlist_DefaultDuo") {
-		Globals::PlaylistName = "Playlist_DefaultDuo";
-		serverId = "3";
-	}
-	else if (PlaylistName == "/Game/Athena/Playlists/Low/Playlist_Low_Solo.Playlist_Low_Solo") {
-		Globals::PlaylistName = "Playlist_Low_Solo";
-		serverId = "4";
-	}
-	else if (PlaylistName == "/Game/Athena/Playlists/Low/Playlist_Low_Duos.Playlist_Low_Duos") {
-		Globals::PlaylistName = "Playlist_Low_Duos";
-		serverId = "6";
-	}
-
-
-	if (curl) {
-		// Set the URL to which you want to send the request
-		std::string url = "http://141.144.236.205:5051/api/v1/server/status/" + serverId + "/offline";
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-
-
-		std::string postData = "x-api-key: " + Globals::ApiKey;
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
-
-
-		// Set the custom header
-		std::string headerValue = "x-api-key: " + Globals::ApiKey;
-		struct curl_slist* headers = NULL;
-		headers = curl_slist_append(headers, headerValue.c_str());
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-
-		// Set the response callback function
-		std::string response;
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-		// Perform the request
-		res = curl_easy_perform(curl);
-
-		// Check for errors
-		if (res != CURLE_OK) {
-			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-		}
-		else {
-			// Request successful, handle the response
-			std::cout << "Response: " << response << std::endl;
-		}
-
-		// Clean up
-		curl_easy_cleanup(curl);
-		curl_global_cleanup();
-	}
-}
-
-*/
-
-std::string replaceSpacesWithPlus(const std::string& str) {
-	std::string result = str;
-	for (char& c : result) {
-		if (c == ' ') {
-			c = '+';
-		}
-	}
-	return result;
-}
-
-
 
 void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerController, void* DeathReport)
 {
@@ -1464,6 +1346,18 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 		DeathCause = ToDeathCause(Tags, false, DeadPawn); // DeadPawn->IsDBNO() ??
 
+		FGameplayTagContainer CopyTags;
+
+		for (int i = 0; i < Tags.GameplayTags.Num(); ++i)
+		{
+			CopyTags.GameplayTags.Add(Tags.GameplayTags.at(i));
+		}
+
+		for (int i = 0; i < Tags.ParentTags.Num(); ++i)
+		{
+			CopyTags.ParentTags.Add(Tags.ParentTags.at(i));
+		}
+
 		LOG_INFO(LogDev, "DeathCause: {}", (int)DeathCause);
 		LOG_INFO(LogDev, "DeadPawn->IsDBNO(): {}", DeadPawn->IsDBNO());
 		LOG_INFO(LogDev, "KillerPlayerState: {}", __int64(KillerPlayerState));
@@ -1476,7 +1370,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 			*(FVector*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathLocation) = DeathLocation;
 
 		if (MemberOffsets::DeathInfo::DeathTags != -1)
-			*(FGameplayTagContainer*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathTags) = Tags;
+			*(FGameplayTagContainer*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::DeathTags) = CopyTags;
 
 		if (MemberOffsets::DeathInfo::bInitialized != -1)
 			*(bool*)(__int64(DeathInfo) + MemberOffsets::DeathInfo::bInitialized) = true;
@@ -1504,14 +1398,6 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 		if (KillerPlayerState && KillerPlayerState != DeadPlayerState)
 		{
-			std::string killAddValue = "10";
-			
-			std::string killReason = "Kills";
-			std::string killUsername = KillerPlayerState->GetPlayerName().ToString();
-			std::string sanitizedKillUsername = replaceSpacesWithPlus(killUsername);
-			std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedKillUsername + "&addValue=" + killAddValue + "&reason=" + killReason);
-			
-
 			if (MemberOffsets::FortPlayerStateAthena::KillScore != -1)
 				KillerPlayerState->Get<int>(MemberOffsets::FortPlayerStateAthena::KillScore)++;
 
@@ -1529,14 +1415,14 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 						int                                                EventParam1;                                              // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 						int                                                EventParam2;                                              // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 						int                                                EventParam3;                                              // (Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-					} AFortAthenaMutator_TDM_OnMutatorGameplayEvent_Params{ 1, 0, 0, 0 };
+					} AFortAthenaMutator_TDM_OnMutatorGameplayEvent_Params{ 1, 0, 0, 0 }; 
 
 					static auto TDM_OnMutatorGameplayEventFn = FindObject<UFunction>("/Script/FortniteGame.FortAthenaMutator_TDM.OnMutatorGameplayEvent");
 					TDM_Mutator->ProcessEvent(TDM_OnMutatorGameplayEventFn, &AFortAthenaMutator_TDM_OnMutatorGameplayEvent_Params);
 				}
 				}); */
 
-				// KillerPlayerState->OnRep_Kills();
+			// KillerPlayerState->OnRep_Kills();
 		}
 
 		// LOG_INFO(LogDev, "Reported kill.");
@@ -1574,7 +1460,7 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 						AmountGiven += AmountToGive;
 					}
 				}
-
+				
 				if (AmountGiven > 0)
 				{
 
@@ -1756,13 +1642,13 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 		if (IsRestartingSupported() && Globals::bAutoRestart && !bIsInAutoRestart)
 		{
+			// wtf
+
 			if (GameState->GetGamePhase() > EAthenaGamePhase::Warmup)
 			{
 				auto AllPlayerStates = UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFortPlayerStateAthena::StaticClass());
-				TArray<AFortPlayerControllerAthena*> AlivePlayers = GameMode->GetAlivePlayers();
-				/*
-				int NumPlayers = AllPlayerStates.Num();
-				int NumPlayersLeft = NumPlayers;
+
+				bool bDidSomeoneWin = AllPlayerStates.Num() == 0;
 
 				for (int i = 0; i < AllPlayerStates.Num(); ++i)
 				{
@@ -1770,50 +1656,16 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 
 					if (CurrentPlayerState->GetPlace() <= 1)
 					{
-						NumPlayersLeft--;
+						bDidSomeoneWin = true;
+						break;
 					}
 				}
-				LOG_INFO(LogDev, "NumPlayersLeft: {}", NumPlayersLeft);
 
-				if (GameState->GetGamePhase() == EAthenaGamePhase::EndGame)
-				 */
-				
+				// LOG_INFO(LogDev, "bDidSomeoneWin: {}", bDidSomeoneWin);
 
-				
-
-				
-				if (AlivePlayers.Num() == 1)
+				// if (GameState->GetGamePhase() == EAthenaGamePhase::EndGame)
+				if (bDidSomeoneWin)
 				{
-					try
-					{
-						TArray<AFortPlayerControllerAthena*> AlivePlayers = GameMode->GetAlivePlayers(); // idk this might work?
-						auto AllPlayerStates = UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFortPlayerStateAthena::StaticClass());
-						for (int i = 0; i < AllPlayerStates.Num(); ++i)
-						{
-							auto CurrentPlayerState = (AFortPlayerStateAthena*)AllPlayerStates.at(i);
-							std::string WinAddValue = "35";
-							std::string WinReason = "Wins";
-							
-							std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
-							std::string sanitizedWinUsername = replaceSpacesWithPlus(PlayerName);
-
-							std::async(std::launch::async, getResponse, Globals::FullAddress + "&username=" + sanitizedWinUsername + "&addValue=" + WinAddValue + "&reason=" + WinReason);
-							
-							//	setEndedMatchmaker();
-
-						}
-						CreateThread(0, 0, RestartThread, 0, 0, 0);
-					}
-					catch (const std::exception& ex)
-					{
-						std::cerr << "Error occurred: " << ex.what() << std::endl;
-						// Or use your preferred logging mechanism to log the error message
-					}
-
-				}
-				if (AlivePlayers.Num() == 0)
-				{
-					//setOfflineMatchmaker();
 					CreateThread(0, 0, RestartThread, 0, 0, 0);
 				}
 			}
