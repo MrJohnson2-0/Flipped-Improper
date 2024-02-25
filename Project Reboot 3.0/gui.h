@@ -1254,7 +1254,36 @@ static inline void MainUI()
 
 		else if (Tab == WEATHER_TAB)
 		{
-			if (ImGui::Button("Spawn A Tornado"));
+			if (ImGui::Button("Spawn A Tornado"))
+			{
+				std::string TornadoClassName = "/Superstorm/Tornado/BP_Tornado.BP_Tornado_C";
+				int Count = 1;
+
+				static auto BGAClass = FindObject<UClass>(L"/Script/Engine.BlueprintGeneratedClass");
+				static auto ClassClass = FindObject<UClass>(L"/Script/CoreUObject.Class");
+				auto ClassObj = TornadoClassName.contains("/Script/") ? FindObject<UClass>(TornadoClassName, ClassClass) : LoadObject<UClass>(TornadoClassName, BGAClass);
+				if (ClassObj)
+				{
+					int AmountSpawned = 0;
+
+					for (int i = 0; i < Count; i++)
+					{
+						auto Loc = FVector{ 1,1,10000 };
+
+						LOG_INFO(LogDev, "NewActor Right????")
+						auto NewActor = GetWorld()->SpawnActor<AActor>(ClassObj, Loc, FQuat(), FVector(1, 1, 1));
+
+						if (!NewActor)
+						{
+							LOG_INFO(LogDev, "No Sigma Actor Spawned")
+						}
+						else
+						{
+							AmountSpawned++;
+						}
+					}
+				}
+			}
 		}
 
 		else if (Tab == LATEGAME_TAB)

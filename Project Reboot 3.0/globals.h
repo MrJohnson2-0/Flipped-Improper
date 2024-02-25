@@ -9,8 +9,8 @@ namespace Globals
 	extern inline bool bCreative = false;
 	extern inline bool bGoingToPlayEvent = false;
 	extern inline bool bEnableAGIDs = true;
-	extern inline bool bNoMCP = true;
-	extern inline bool bLogProcessEvent = false;
+	extern inline bool bNoMCP = false;
+	extern inline bool bLogProcessEvent = true;
 	// extern inline bool bLateGame = false;
 	extern inline std::atomic<bool> bLateGame(false);
 
