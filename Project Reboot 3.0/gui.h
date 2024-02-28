@@ -89,7 +89,7 @@ extern inline bool bEnableCombinePickup = false;
 extern inline int AmountOfBotsToSpawn = 0;
 extern inline bool bEnableRebooting = true;
 extern inline bool bEngineDebugLogs = false;
-extern inline bool bStartedBus = false;
+
 extern inline bool bShouldDestroyAllPlayerBuilds = false;
 extern inline int AmountOfHealthSiphon = 0;
 
@@ -134,7 +134,7 @@ static inline void Restart() // todo move?
 	Globals::bInitializedPlaylist = false;
 	Globals::bStartedListening = false;
 	Globals::bHitReadyToStartMatch = false;
-	bStartedBus = false;
+	Globals::bStartedBus = false;
 	AmountOfRestarts++;
 
 	LOG_INFO(LogDev, "Switching!");
@@ -710,7 +710,7 @@ static inline void MainUI()
 			{
 				StaticUI();
 
-				if (!bStartedBus)
+				if (!Globals::bStartedBus)
 				{
 					bool bWillBeLategame = Globals::bLateGame.load();
 					ImGui::Checkbox("Lategame", &bWillBeLategame);
@@ -799,13 +799,13 @@ static inline void MainUI()
 				}
 				*/
 
-				if (!bStartedBus)
+				if (!Globals::bStartedBus)
 				{
 					if (Globals::bLateGame.load() || Fortnite_Version >= 11)
 					{
 						if (ImGui::Button("Start Bus"))
 						{
-							bStartedBus = true;
+							Globals::bStartedBus = true;
 
 							auto GameMode = (AFortGameModeAthena*)GetWorld()->GetGameMode();
 							auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
@@ -826,7 +826,7 @@ static inline void MainUI()
 					{
 						if (ImGui::Button("Start Bus Countdown"))
 						{
-							bStartedBus = true;
+							Globals::bStartedBus = true;
 
 							auto GameMode = (AFortGameMode*)GetWorld()->GetGameMode();
 							auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());

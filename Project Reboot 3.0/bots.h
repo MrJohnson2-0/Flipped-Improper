@@ -89,9 +89,9 @@ public:
 		}
 		else
 		{
-			static int CurrentBotNum = 356;
+			static int CurrentBotNum = 1;
 			auto BotNumWStr = std::to_wstring(CurrentBotNum++);
-			NewName = (L"PeaceController" + BotNumWStr).c_str();
+			NewName = (L"Bot" + BotNumWStr).c_str();
 		}
 
 		if (auto PlayerController = Cast<APlayerController>(Controller))
@@ -407,16 +407,18 @@ namespace Bosses
 			Controller->Possess(Pawn);
 
 			Pawn->SetHealth(300);
-			
+			Pawn->SetMaxHealth(300);
 			
 			Pawn->SetShield(100);
 			
-			Pawn->SetMaxHealth(300);
+			
 
-			std::string CIDStr = "CID_A_286_Athena_Commando_M_Turtleneck";
-			auto CIDDef = FindObject(CIDStr, nullptr, ANY_PACKAGE);
+			std::string CharacterPart1Str = "CP_Athena_Body_M_Turtleneck";
+			auto CharacterPart1Def = FindObject(CharacterPart1Str, nullptr, ANY_PACKAGE);
 
-			ApplyCID(Pawn, CIDDef);
+			Pawn->ServerChoosePart(EFortCustomPartType::Body, CharacterPart1Def);
+			LOG_INFO(LogBots, "Please ApplyHisPenis");
+			
 
 			AFortInventory** Inventory = nullptr;
 
@@ -514,14 +516,12 @@ namespace Bosses
 		static void Tick()
 		{
 			if (BossesToTick.size() == 0)
+				LOG_ERROR(LogBots, "No Bots To Tick You Sigmas");
 				return;
 
 			auto GameState = Cast<AFortGameStateAthena>(GetWorld()->GetGameState());
 			auto GameMode = Cast<AFortGameModeAthena>(GetWorld()->GetGameMode());
 
-			// auto AllBuildingContainers = UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABuildingContainer::StaticClass());
-
-			// for (int i = 0; i < GameMode->GetAlivePlayers().Num(); ++i)
 			for (auto& PlayerBot : BossesToTick)
 			{
 				auto CurrentPlayer = PlayerBot.Controller;
@@ -537,21 +537,30 @@ namespace Bosses
 					continue;
 
 
-
-				if (!CurrentPlayer->IsPlayingEmote())
+				if (!CurrentPlayerState->IsInAircraft())
 				{
-					LOG_INFO(LogDev, "GetJiggy");
-					static auto AthenaDanceItemDefinitionClass = FindObject<UClass>("/Script/FortniteGame.AthenaDanceItemDefinition");
-					auto RandomDanceID = GetRandomObjectOfClass(AthenaDanceItemDefinitionClass);
+					if (!CurrentPlayer->IsPlayingEmote())
+					{
+						LOG_INFO(LogDev, "GetJiggy");
+						static auto AthenaDanceItemDefinitionClass = FindObject<UClass>("/Script/FortniteGame.AthenaDanceItemDefinition");
+						auto RandomDanceID = GetRandomObjectOfClass(AthenaDanceItemDefinitionClass);
 
-					CurrentPlayer->ServerPlayEmoteItemHook(CurrentPlayer, RandomDanceID);
+						CurrentPlayer->ServerPlayEmoteItemHook(CurrentPlayer, RandomDanceID);
+					}
 				}
+				else {
+					LOG_ERROR(LogDev, "Why No CurrentPlayerState->IsInAircraft");
+				}
+				
 
 
 				if (CurrentPlayerState->IsInAircraft() && !CurrentPlayerState->HasThankedBusDriver())
 				{
 					static auto ServerThankBusDriverFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ServerThankBusDriver");
 					CurrentPlayer->ProcessEvent(ServerThankBusDriverFn);
+				}
+				else {
+					LOG_INFO(LogDev, "No No Wanna");
 				}
 
 				if (CurrentPawn)
@@ -571,6 +580,9 @@ namespace Bosses
 				{
 					CurrentPlayer->ServerAttemptAircraftJumpHook(CurrentPlayer, FRotator());
 				}
+				else {
+					LOG_INFO(LogDev, "Not Sigma");
+				}
 			}
 
 			// AllBuildingContainers.Free();
@@ -578,6 +590,7 @@ namespace Bosses
 
 		static AFortPlayerController* SpawnBoss(FTransform SpawnTransform)
 		{
+			LOG_INFO(LogBots, "Spawning A Epic Sigma Boss")
 			auto playerBot = Boss();
 			playerBot.Initialize(SpawnTransform);
 			BossesToTick.push_back(playerBot);

@@ -156,6 +156,7 @@ public:
 
 		return NewAndModifiedInstances.first.size() > 0 ? NewAndModifiedInstances.first[0] : nullptr;
 	}
+	
 
 	TSet<FGuid>& GetGadgetTrackedAttributeItemInstanceIds() // actually in zone
 	{
