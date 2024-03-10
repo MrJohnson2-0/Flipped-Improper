@@ -549,7 +549,7 @@ namespace Bosses
 					}
 				}
 				else {
-					LOG_ERROR(LogDev, "Why No CurrentPlayerState->IsInAircraft");
+					LOG_INFO(LogDev, "Why No CurrentPlayerState->IsInAircraft");
 				}
 				
 
