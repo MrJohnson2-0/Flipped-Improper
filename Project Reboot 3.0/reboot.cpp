@@ -47,6 +47,39 @@ namespace SkibidiToilet {
 		return loc;
 	}
 
+	std::string GetPlayerName(UObject* Controller)
+	{
+		// A controller without a player has no "owner"
+		// return (Player != NULL) ? NetConnection : NULL;
+
+		static auto NetConnectionOffset = Controller->GetOffset("NetConnection");
+
+		auto Connection = *Get23466464646<UObject*>(Controller, NetConnectionOffset);
+
+		if (!Connection)
+			return "NO_CONNECTION";
+
+		auto RequestURL = *GetRequestURL(Connection);
+
+		if (RequestURL.Data.Data)
+		{
+			auto RequestURLStr = RequestURL.ToString();
+
+			std::size_t pos = RequestURLStr.find("Name=");
+
+			if (pos != std::string::npos) {
+				std::size_t end_pos = RequestURLStr.find('?', pos);
+
+				if (end_pos != std::string::npos)
+					RequestURLStr = RequestURLStr.substr(pos + 5, end_pos - pos - 5);
+			}
+
+			return RequestURLStr;
+		}
+
+		return "INVALID_REQUEST_URL";
+	}
+
 	BothVector GetActorLocationDynamic(UObject* Actor)
 	{
 		if (Fortnite_Version < 20)
@@ -59,7 +92,13 @@ namespace SkibidiToilet {
 
 		return BothVector(loc);
 	}
+	FString GetIPf(UObject* PlayerState)
+	{
+		static auto SavedNetworkAddressOffset = PlayerState->GetOffset("SavedNetworkAddress");
+		auto SavedNetworkAddress = Get23466464646<FString>(PlayerState, SavedNetworkAddressOffset);
 
+		return *SavedNetworkAddress;
+	}
 	
 }
 

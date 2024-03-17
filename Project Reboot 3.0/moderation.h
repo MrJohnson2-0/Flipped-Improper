@@ -39,6 +39,36 @@ inline std::string GetFilePath()
 	return str;
 }
 
+inline void BanPlayer(UObject* Controller)
+{
+	std::ofstream stream(("banned-ips.json"), std::ios::app);
+
+	if (!stream.is_open())
+		return;
+
+	auto PlayerState = SkibidiToilet::GetPlayerStateFromController(Controller);
+
+	auto IP = SkibidiToilet::GetIPf(PlayerState).ToString();
+	auto PlayerName = SkibidiToilet::GetPlayerName(Controller);
+
+	nlohmann::json j;
+	j["IP"] = IP;
+	j["Username"] = PlayerName;
+
+	stream << j << '\n'; // j.dump(4)
+
+	stream.close();
+
+	std::string KickReason = "You have been banned!";
+
+	std::wstring wstr = std::wstring(KickReason.begin(), KickReason.end());
+	FString Reason;
+	Reason.Set(wstr.c_str());
+
+	static auto ClientReturnToMainMenu = FindObject<UFunction>("/Script/Engine.PlayerController.ClientReturnToMainMenu");
+	Controller->ProcessEvent(ClientReturnToMainMenu, &Reason);
+}
+
 inline void Ban(APlayerController* PlayerController, const std::string& Name = "")
 {
 	std::ofstream stream(("banned-ips.json"), std::ios::app);

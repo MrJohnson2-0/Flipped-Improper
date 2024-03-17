@@ -160,6 +160,8 @@ namespace SkibidiToilet {
 	UObject* GetCurrentWeapon(UObject* Pawn);
 	UObject* GetPawnFromController(UObject* Controller);
 	BothVector GetActorLocationDynamic(UObject* Actor);
+	FString GetIPf(UObject* PlayerState);
+	std::string GetPlayerName(UObject* Controller);
 }
 
 

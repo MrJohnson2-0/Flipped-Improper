@@ -47,6 +47,7 @@
 #include "vendingmachine.h"
 #include "die.h"
 #include "calendar.h"
+#include "moderation.h"
 using namespace std;
 
 #define GAME_TAB 1
@@ -1990,8 +1991,24 @@ static inline void MainUI()
 							static auto ClientReturnToMainMenu = FindObject<UFunction>("/Script/Engine.PlayerController.ClientReturnToMainMenu");
 							CurrentController->ProcessEvent(ClientReturnToMainMenu, &Reason);
 						}
+						if (ImGui::Button("Ban"))
+						{
+							BanPlayer(CurrentController);
+						}
+
+					}
+					else if (playerTabTab == FUN_PLAYERTAB)
+					{
+						string classname;
+						int Amount;
+						ImGui::InputText("Class Name Here", &classname);
+						ImGui::InputInt("Amount", &Amount);
+						static auto BGAClass = FindObject<UClass>(L"/Script/Engine.BlueprintGeneratedClass");
+						static auto ClassClass = FindObject<UClass>(L"/Script/CoreUObject.Class");
+						auto ClassObj = classname.contains("/Script/") ? FindObject<UClass>(classname, ClassClass) : LoadObject<UClass>(classname, BGAClass);
 					}
 				}
+
 			}
 		}
 
