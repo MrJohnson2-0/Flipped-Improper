@@ -1941,7 +1941,7 @@ static inline void MainUI()
 					if (playerTabTab == MAIN_PLAYERTAB)
 					{
 						static std::string WID;
-						static std::string KickReason = "You have been kicked!";
+						static std::string KickReason = "You Have Been Banned";
 						static int stud = 0;
 
 						ImGui::InputText("WID To Give", &WID);
