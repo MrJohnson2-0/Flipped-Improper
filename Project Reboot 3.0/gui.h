@@ -323,12 +323,11 @@ static inline void StaticUI()
 		}
 	}
 
+
 	ImGui::InputInt("Shield/Health for siphon", &AmountOfHealthSiphon);
 
-#ifndef PROD
 	ImGui::Checkbox("Log ProcessEvent", &Globals::bLogProcessEvent);
 	// ImGui::InputInt("Amount of bots to spawn", &AmountOfBotsToSpawn);
-#endif
 
 	ImGui::Checkbox("Infinite Ammo", &Globals::bInfiniteAmmo);
 	ImGui::Checkbox("Infinite Materials", &Globals::bInfiniteMaterials);
@@ -355,16 +354,16 @@ static inline void MainTabs()
 			ImGui::EndTabItem();
 		}
 
-		// if (serverStatus == EServerStatus::Up)
+		if (Globals::bStartedListening)
 		{
-			/* if (ImGui::BeginTabItem("Players"))
+			if (ImGui::BeginTabItem("Players"))
 			{
 				Tab = PLAYERS_TAB;
 				ImGui::EndTabItem();
-			} */
+			} 
 		}
 
-		if (false && ImGui::BeginTabItem("Gamemode"))
+		if (ImGui::BeginTabItem("Gamemode"))
 		{
 			Tab = GAMEMODE_TAB;
 			PlayerTab = -1;
@@ -444,25 +443,7 @@ static inline void MainTabs()
 
 		// maybe a Replication Stats for >3.3?
 
-#ifndef PROD
-		if (ImGui::BeginTabItem("Developer"))
-		{
-			Tab = DEVELOPER_TAB;
-			PlayerTab = -1;
-			bInformationTab = false;
-			ImGui::EndTabItem();
-		}
-
-		if (ImGui::BeginTabItem("Debug Logs"))
-		{
-			Tab = DEBUGLOG_TAB;
-			PlayerTab = -1;
-			bInformationTab = false;
-			ImGui::EndTabItem();
-		}
-#endif
-
-		if (false && ImGui::BeginTabItem(("Credits")))
+		if (ImGui::BeginTabItem(("Credits")))
 		{
 			Tab = CREDITS_TAB;
 			PlayerTab = -1;
@@ -545,7 +526,22 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 		return Aircrafts;
 	};
 
-	GameMode->StartAircraftPhase();
+	static auto WarmupCountdownEndTimeOffset = GameState->GetOffset("WarmupCountdownEndTime");
+	// GameState->Get<float>(WarmupCountdownEndTimeOffset) = UGameplayStatics::GetTimeSeconds(GetWorld()) + 10;
+
+	float TimeSeconds = GameState->GetServerWorldTimeSeconds(); // UGameplayStatics::GetTimeSeconds(GetWorld());
+	float Duration = 10;
+	float EarlyDuration = Duration;
+
+	static auto WarmupCountdownStartTimeOffset = GameState->GetOffset("WarmupCountdownStartTime");
+	static auto WarmupCountdownDurationOffset = GameMode->GetOffset("WarmupCountdownDuration");
+	static auto WarmupEarlyCountdownDurationOffset = GameMode->GetOffset("WarmupEarlyCountdownDuration");
+
+	GameState->Get<float>(WarmupCountdownEndTimeOffset) = TimeSeconds + Duration;
+	GameMode->Get<float>(WarmupCountdownDurationOffset) = Duration;
+
+	// GameState->Get<float>(WarmupCountdownStartTimeOffset) = TimeSeconds;
+	GameMode->Get<float>(WarmupEarlyCountdownDurationOffset) = EarlyDuration;
 
 	while (GetAircrafts().size() <= 0)
 	{
@@ -603,30 +599,6 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 	{
 		Sleep(1000 / MaxTickRate);
 	}
-
-	/*
-	static auto MapInfoOffset = GameState->GetOffset("MapInfo");
-	auto MapInfo = GameState->Get(MapInfoOffset);
-
-	if (MapInfo)
-	{
-		static auto FlightInfosOffset = MapInfo->GetOffset("FlightInfos", false);
-
-		if (FlightInfosOffset != -1)
-		{
-			auto& FlightInfos = MapInfo->Get<TArray<FAircraftFlightInfo>>(FlightInfosOffset);
-
-			for (int i = 0; i < FlightInfos.Num(); i++)
-			{
-				auto FlightInfo = FlightInfos.AtPtr(i, FAircraftFlightInfo::GetStructSize());
-
-				FlightInfo->GetFlightSpeed() = FlightSpeed;
-				FlightInfo->GetFlightStartLocation() = LocationToStartAircraft;
-				FlightInfo->GetTimeTillDropStart() = DropStartTime;
-			}
-		}
-	}
-	*/
 
 	while (GameState->GetGamePhase() == EAthenaGamePhase::Aircraft)
 	{
@@ -716,7 +688,7 @@ static inline void MainUI()
 					ImGui::SliderInt("Players required to start the match", &WarmupRequiredPlayerCount, 1, 100);
 				}
 
-				ImGui::Text(std::format("Joinable {}", Globals::bStartedListening).c_str());
+				ImGui::Text(std::format("Started Listening {}", Globals::bStartedListening).c_str());
 
 				static std::string ConsoleCommand;
 
@@ -732,45 +704,6 @@ static inline void MainUI()
 					UKismetSystemLibrary::ExecuteConsoleCommand(GetWorld(), cmd, nullptr);
 				}
 
-				/* if (ImGui::Button("Spawn BGAs"))
-				{
-					SpawnBGAs();
-				} */
-
-				/*
-				if (ImGui::Button("New"))
-				{
-					static auto NextFn = FindObject<UFunction>("/Game/Athena/Prototype/Blueprints/Cube/CUBE.CUBE_C.Next");
-					static auto NewFn = FindObject<UFunction>("/Game/Athena/Prototype/Blueprints/Cube/CUBE.CUBE_C.New");					
-					auto Loader = GetEventLoader("/Game/Athena/Prototype/Blueprints/Cube/CUBE.CUBE_C");
-
-					LOG_INFO(LogDev, "Loader: {}", __int64(Loader));
-
-					if (Loader)
-					{
-						int32 NewParam = 1;
-						// Loader->ProcessEvent(NextFn, &NewParam);
-						Loader->ProcessEvent(NewFn, &NewParam);
-					}
-				}
-
-				if (ImGui::Button("Next"))
-				{
-					static auto NextFn = FindObject<UFunction>("/Game/Athena/Prototype/Blueprints/Cube/CUBE.CUBE_C.Next");
-					static auto NewFn = FindObject<UFunction>("/Game/Athena/Prototype/Blueprints/Cube/CUBE.CUBE_C.New");
-					auto Loader = GetEventLoader("/Game/Athena/Prototype/Blueprints/Cube/CUBE.CUBE_C");
-
-					LOG_INFO(LogDev, "Loader: {}", __int64(Loader));
-
-					if (Loader)
-					{
-						int32 NewParam = 1;
-						Loader->ProcessEvent(NextFn, &NewParam);
-						// Loader->ProcessEvent(NewFn, &NewParam);
-					}
-				}
-				*/
-
 				if (!bIsInAutoRestart && Engine_Version < 424 && ImGui::Button("Restart"))
 				{
 					if (Engine_Version < 424)
@@ -784,25 +717,11 @@ static inline void MainUI()
 					}
 				}
 
-				/*
-				if (ImGui::Button("Test bruh"))
-				{
-					__int64 bruh;
-					__int64* (*sub_7FF7476F4458)(__int64* a1, UWorld* a2, __int64 a3) = decltype(sub_7FF7476F4458)(Addresses::GetSessionInterface);
-
-					sub_7FF7476F4458(&bruh, GetWorld(), 0);
-
-					LOG_INFO(LogDev, "bruh: 0x{:x}", bruh);
-					auto VFT = *(__int64*)bruh;
-					LOG_INFO(LogDev, "VFT: 0x{:x}", VFT - __int64(GetModuleHandleW(0)));
-				}
-				*/
+				
 
 				if (!bStartedBus)
 				{
-					if (Globals::bLateGame.load() 
-						|| Fortnite_Version >= 11 // Its been a minute but iirc it just wouldnt start when countdown ended or crash? cant remember
-						)
+					if (Globals::bLateGame.load() || Fortnite_Version >= 11 )
 					{
 						if (ImGui::Button("Start Bus"))
 						{
@@ -819,7 +738,22 @@ static inline void MainUI()
 							}
 							else
 							{
-								GameMode->StartAircraftPhase();
+								static auto WarmupCountdownEndTimeOffset = GameState->GetOffset("WarmupCountdownEndTime");
+								// GameState->Get<float>(WarmupCountdownEndTimeOffset) = UGameplayStatics::GetTimeSeconds(GetWorld()) + 10;
+
+								float TimeSeconds = GameState->GetServerWorldTimeSeconds(); // UGameplayStatics::GetTimeSeconds(GetWorld());
+								float Duration = 10;
+								float EarlyDuration = Duration;
+
+								static auto WarmupCountdownStartTimeOffset = GameState->GetOffset("WarmupCountdownStartTime");
+								static auto WarmupCountdownDurationOffset = GameMode->GetOffset("WarmupCountdownDuration");
+								static auto WarmupEarlyCountdownDurationOffset = GameMode->GetOffset("WarmupEarlyCountdownDuration");
+
+								GameState->Get<float>(WarmupCountdownEndTimeOffset) = TimeSeconds + Duration;
+								GameMode->Get<float>(WarmupCountdownDurationOffset) = Duration;
+
+								// GameState->Get<float>(WarmupCountdownStartTimeOffset) = TimeSeconds;
+								GameMode->Get<float>(WarmupEarlyCountdownDurationOffset) = EarlyDuration;
 							}
 						}
 					}
@@ -990,6 +924,11 @@ static inline void MainUI()
 					SafeZoneIndicator->SkipShrinkSafeZone();
 				}
 			}
+		}
+
+		else if (Tab == CREDITS_TAB)
+		{
+			ImGui::Text("Mr Milxnor is Sigma");
 		}
 
 		else if (Tab == DUMP_TAB)
@@ -1218,171 +1157,6 @@ static inline void MainUI()
 				ImGui::InputInt("End Reversing Phase", &EndReverseZonePhase);
 			}
 		}
-		else if (Tab == DEVELOPER_TAB)
-		{
-			static std::string ClassNameToDump;
-			static std::string FunctionNameToDump;
-			static std::string ObjectToDump;
-			static std::string FileNameToSaveTo;
-			static bool bExcludeUnhandled = true;
-
-			ImGui::Checkbox("Handle Death", &bHandleDeath);
-			ImGui::Checkbox("Fill Vending Machines", &Globals::bFillVendingMachines);
-			ImGui::Checkbox("Enable Bot Tick", &bEnableBotTick);
-			ImGui::Checkbox("Enable Rebooting", &bEnableRebooting);
-			ImGui::Checkbox("Enable Combine Pickup", &bEnableCombinePickup);
-			ImGui::Checkbox("Exclude unhandled", &bExcludeUnhandled);
-			ImGui::InputInt("Amount To Subtract Index", &AmountToSubtractIndex);
-			ImGui::InputText("Class Name to mess with", &ClassNameToDump);
-			ImGui::InputText("Object to dump", &ObjectToDump);
-			ImGui::InputText("File to save to", &FileNameToSaveTo);
-
-			ImGui::InputText("Function Name to mess with", &FunctionNameToDump);
-
-			if (ImGui::Button("Print Gamephase Step"))
-			{
-				auto GameState = Cast<AFortGameStateAthena>(GetWorld()->GetGameState());
-
-				if (GameState)
-				{
-					LOG_INFO(LogDev, "GamePhaseStep: {}", (int)GameState->GetGamePhaseStep());
-				}
-			}
-
-			if (ImGui::Button("Dump Object Info"))
-			{
-				ObjectViewer::DumpContentsToFile(ObjectToDump, FileNameToSaveTo, bExcludeUnhandled);
-			}
-
-			if (ImGui::Button("Print all instances of class"))
-			{
-				auto ClassToScuff = FindObject<UClass>(ClassNameToDump);
-
-				if (ClassToScuff)
-				{
-					auto ObjectNum = ChunkedObjects ? ChunkedObjects->Num() : UnchunkedObjects ? UnchunkedObjects->Num() : 0;
-
-					for (int i = 0; i < ObjectNum; i++)
-					{
-						auto CurrentObject = GetObjectByIndex(i);
-
-						if (!CurrentObject)
-							continue;
-
-						if (!CurrentObject->IsA(ClassToScuff))
-							continue;
-
-						LOG_INFO(LogDev, "Object Name: {}", CurrentObject->GetPathName());
-					}
-				}
-			}
-
-			if (ImGui::Button("Load BGA Class"))
-			{
-				static auto BlueprintGeneratedClassClass = FindObject<UClass>(L"/Script/Engine.BlueprintGeneratedClass");
-				auto Class = LoadObject(ClassNameToDump, BlueprintGeneratedClassClass);
-
-				LOG_INFO(LogDev, "New Class: {}", __int64(Class));
-			}
-
-			if (ImGui::Button("Find all classes that inherit"))
-			{
-				auto ClassToScuff = FindObject<UClass>(ClassNameToDump);
-
-				if (ClassToScuff)
-				{
-					auto ObjectNum = ChunkedObjects ? ChunkedObjects->Num() : UnchunkedObjects ? UnchunkedObjects->Num() : 0;
-
-					for (int i = 0; i < ObjectNum; i++)
-					{
-						auto CurrentObject = GetObjectByIndex(i);
-
-						if (!CurrentObject || CurrentObject == ClassToScuff)
-							continue;
-
-						if (!CurrentObject->IsA(ClassToScuff))
-							continue;
-
-						LOG_INFO(LogDev, "Class Name: {}", CurrentObject->GetPathName());
-					}
-				}
-			}
-
-			if (ImGui::Button("Print Class VFT"))
-			{
-				auto Class = FindObject<UClass>(ClassNameToDump);
-
-				if (Class)
-				{
-					auto ClassToDump = Class->CreateDefaultObject();
-
-					if (ClassToDump)
-					{
-						LOG_INFO(LogDev, "{} VFT: 0x{:x}", ClassToDump->GetName(), __int64(ClassToDump->VFTable) - __int64(GetModuleHandleW(0)));
-					}
-				}
-			}
-
-			if (ImGui::Button("Print Function Exec Addr"))
-			{
-				auto Function = FindObject<UFunction>(FunctionNameToDump);
-
-				if (Function)
-				{
-					LOG_INFO(LogDev, "{} Exec: 0x{:x}", Function->GetName(), __int64(Function->GetFunc()) - __int64(GetModuleHandleW(0)));
-				}
-			}
-
-			/* if (ImGui::Button("Load BGA Class (and spawn so no GC)"))
-			{
-				static auto BGAClass = FindObject<UClass>("/Script/Engine.BlueprintGeneratedClass");
-				auto Class = LoadObject<UClass>(ClassNameToDump, BGAClass);
-
-				if (Class)
-				{
-					GetWorld()->SpawnActor<AActor>(Class, FVector());
-				}
-			} */
-
-			/* 
-			ImGui::Text(std::format("Amount of hooks {}", AllFunctionHooks.size()).c_str());
-
-			for (auto& FunctionHook : AllFunctionHooks)
-			{
-				if (ImGui::Button(std::format("{} {} (0x{:x})", (FunctionHook.IsHooked ? "Unhook" : "Hook"), FunctionHook.Name, (__int64(FunctionHook.Original) - __int64(GetModuleHandleW(0)))).c_str()))
-				{
-					if (FunctionHook.IsHooked)
-					{
-						if (!FunctionHook.VFT || FunctionHook.Index == -1)
-						{
-							Hooking::MinHook::Unhook(FunctionHook.Original);
-						}
-						else
-						{
-							VirtualSwap(FunctionHook.VFT, FunctionHook.Index, FunctionHook.Original);
-						}
-					}
-					else
-					{
-						Hooking::MinHook::Hook(FunctionHook.Original, FunctionHook.Detour, nullptr, FunctionHook.Name);
-					}
-
-					FunctionHook.IsHooked = !FunctionHook.IsHooked;
-				}
-			} 
-			*/
-		}
-		else if (Tab == DEBUGLOG_TAB)
-		{
-			ImGui::Checkbox("Floor Loot Debug Log", &bDebugPrintFloorLoot);
-			ImGui::Checkbox("Looting Debug Log", &bDebugPrintLooting);
-			ImGui::Checkbox("Swapping Debug Log", &bDebugPrintSwapping);
-			ImGui::Checkbox("Engine Debug Log", &bEngineDebugLogs);
-		}
-		else if (Tab == SETTINGS_TAB)
-		{
-			// ImGui::Checkbox("Use custom lootpool (from Win64/lootpool.txt)", &Defines::bCustomLootpool);
-		}
 	}
 }
 
@@ -1400,6 +1174,15 @@ static inline void PregameUI()
 		bool bWillBeLategame = Globals::bLateGame.load();
 		ImGui::Checkbox("Lategame", &bWillBeLategame);
 		SetIsLategame(bWillBeLategame);
+	}
+
+	if (Fortnite_Version == 19.10)
+	{
+		if (ImGui::Checkbox("OneShot", &Globals::bOneShot));
+		{
+			PlaylistName = "/Game/Athena/Playlists/Low/Playlist_Low_Solo.Playlist_Low_Solo";
+		}
+		
 	}
 
 	if (HasEvent())
@@ -1456,7 +1239,7 @@ static inline DWORD WINAPI GuiThread(LPVOID)
 {
 	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"RebootClass", NULL };
 	::RegisterClassEx(&wc);
-	HWND hwnd = ::CreateWindowExW(0L, wc.lpszClassName, L"Project Reboot", (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX), 100, 100, Width, Height, NULL, NULL, wc.hInstance, NULL);
+	HWND hwnd = ::CreateWindowExW(0L, wc.lpszClassName, L"Project Skid", (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX), 100, 100, Width, Height, NULL, NULL, wc.hInstance, NULL);
 
 	if (false) // idk why this dont work
 	{
@@ -1544,7 +1327,7 @@ static inline DWORD WINAPI GuiThread(LPVOID)
 
 		if (!ImGui::IsWindowCollapsed())
 		{
-			ImGui::Begin("Project Reboot 3.0", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
+			ImGui::Begin("Skid 3.0", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
 
 			Globals::bInitializedPlaylist ? MainUI() : PregameUI();
 
