@@ -69,6 +69,7 @@ public:
 
         return success;
     }
+
 private:
     CURL* curl;
 };

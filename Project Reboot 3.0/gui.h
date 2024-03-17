@@ -792,7 +792,47 @@ static inline void MainUI()
 
 		else if (Tab == PLAYERS_TAB)
 		{
-			
+			auto World = GetWorld();
+			if (World)
+			{
+				std::vector<std::pair<UObject*, UObject*>> AllControllers;
+
+
+				auto world = GetWorld();
+
+				if (world)
+				{
+					static auto NetDriverOffset = world->GetOffset("NetDriver");
+					auto NetDriver = *(UObject**)(__int64(world) + NetDriverOffset);
+
+					if (NetDriver)
+					{
+						static auto ClientConnectionsOffset = NetDriver->GetOffset("ClientConnections");
+						auto ClientConnections = (TArray<UObject*>*)(__int64(NetDriver) + ClientConnectionsOffset);
+
+						if (ClientConnections)
+						{
+							for (int i = 0; i < ClientConnections->Num(); i++)
+							{
+								auto Connection = ClientConnections->At(i);
+
+								if (!Connection)
+									continue;
+
+								static auto Connection_PlayerControllerOffset = Connection->GetOffset("PlayerController");
+								auto CurrentController = *(UObject**)(__int64(Connection) + Connection_PlayerControllerOffset);
+
+								if (CurrentController)
+								{
+									AllControllers.push_back({ CurrentController, Connection });
+								}
+							}
+						}
+
+						ImGui::Text(("Players Connected: " + std::to_string(AllControllers.size())).c_str());
+					}
+				}
+			}
 		}
 
 		else if (Tab == EVENT_TAB)
@@ -1052,6 +1092,16 @@ static inline void MainUI()
 					std::cout << "Failed to open playlist file!\n";
 			}
 		}
+		else if (Tab == GAMEMODE_TAB)
+		{
+			if (Fortnite_Version == 19.10)
+			{
+				if (ImGui::Checkbox("OneShot", &Globals::bOneShot));
+				{
+					PlaylistName = "/Game/Athena/Playlists/Low/Playlist_Low_Solo.Playlist_Low_Solo";
+				}
+			}
+		}
 		else if (Tab == UNBAN_TAB)
 		{
 
@@ -1176,14 +1226,7 @@ static inline void PregameUI()
 		SetIsLategame(bWillBeLategame);
 	}
 
-	if (Fortnite_Version == 19.10)
-	{
-		if (ImGui::Checkbox("OneShot", &Globals::bOneShot));
-		{
-			PlaylistName = "/Game/Athena/Playlists/Low/Playlist_Low_Solo.Playlist_Low_Solo";
-		}
-		
-	}
+	
 
 	if (HasEvent())
 	{

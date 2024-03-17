@@ -107,6 +107,7 @@ static inline void ServerVehicleUpdate(UObject* Context, FFrame& Stack, void* Re
 	Mesh->ProcessEvent(SetPhysicsAngularVelocityFn, &UPrimitiveComponent_SetPhysicsAngularVelocity_Params);
 }
 
+/*
 static inline void AddVehicleHook()
 {
 	static auto FortAthenaVehicleDefault = FindObject(L"/Script/FortniteGame.Default__FortAthenaVehicle");
@@ -124,6 +125,7 @@ static inline void AddVehicleHook()
 			ServerVehicleUpdate, nullptr, false, true);
 	}
 }
+*/
 
 struct FVehicleWeightedDef
 {

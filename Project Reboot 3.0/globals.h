@@ -16,7 +16,7 @@ namespace Globals
 	extern inline bool bLogProcessEvent = false;
 	// extern inline bool bLateGame = false;
 	
-
+	extern inline bool TurnOnRebootingfr = false;
 	extern inline bool bInfiniteMaterials = false;
 	extern inline bool bInfiniteAmmo = false;
 	extern inline bool bShouldUseReplicationGraph = false;
