@@ -52,9 +52,9 @@ inline void InitLogger()
         freopen_s(&stream, "err.txt", "w", stderr);
     }
 
-    SetConsoleTitleA("Project Reboot 3.0");
+    SetConsoleTitleA("WalterThugatron");
 
-    std::string logName = "reboot.log"; // GenerateLogFileName();
+    std::string logName = "dathug.log"; // GenerateLogFileName();
 
     sinks.emplace_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>())->set_pattern("[%D-%T] %n: %^%v%$");
     sinks.emplace_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(logName, true))->set_pattern("[%D-%T] %n: %l: %v");
@@ -88,6 +88,7 @@ inline void InitLogger()
     MakeLogger("LogRebooting");
     MakeLogger("LogObjectViewer");
     MakeLogger("LogLateGame");
+    MakeLogger("LogFlippery");
 }
 
 #define LOG_DEBUG(loggerName, ...)                                            \

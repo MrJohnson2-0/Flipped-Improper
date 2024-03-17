@@ -18,6 +18,10 @@
 #include <vector>
 #include <format>
 #include <imgui/imgui_internal.h>
+#include "discord.h"
+#include <chrono> // for std::chrono
+#include <thread> // for std::this_thread
+#include <curl/curl.h>
 #include <set>
 #include <fstream>
 #include <olectl.h>
@@ -43,6 +47,7 @@
 #include "vendingmachine.h"
 #include "die.h"
 #include "calendar.h"
+using namespace std;
 
 #define GAME_TAB 1
 #define PLAYERS_TAB 2
@@ -54,11 +59,12 @@
 #define DUMP_TAB 8
 #define UNBAN_TAB 9
 #define FUN_TAB 10
-#define LATEGAME_TAB 11
-#define DEVELOPER_TAB 12
-#define DEBUGLOG_TAB 13
-#define SETTINGS_TAB 14
-#define CREDITS_TAB 15
+#define WEATHER_TAB 11
+#define LATEGAME_TAB 12
+#define DEVELOPER_TAB 13
+#define DEBUGLOG_TAB 14
+#define SETTINGS_TAB 15
+#define CREDITS_TAB 16
 
 #define MAIN_PLAYERTAB 1
 #define INVENTORY_PLAYERTAB 2
@@ -74,24 +80,26 @@ extern inline bool bHandleDeath = true;
 extern inline bool bUseCustomMap = false;
 extern inline std::string CustomMapName = "";
 extern inline int AmountToSubtractIndex = 1;
-extern inline int SecondsUntilTravel = 5;
+extern inline int SecondsUntilTravel = 50;
 extern inline bool bSwitchedInitialLevel = false;
+extern inline bool bStartedBus = false;
 extern inline bool bIsInAutoRestart = false;
 extern inline float AutoBusStartSeconds = 60;
 extern inline int NumRequiredPlayersToStart = 2;
 extern inline bool bDebugPrintLooting = false;
 extern inline bool bDebugPrintFloorLoot = false;
 extern inline bool bDebugPrintSwapping = false;
-extern inline bool bEnableBotTick = false;
+extern inline bool bEnableBotTick = true;
 extern inline bool bZoneReversing = false;
 extern inline bool bEnableCombinePickup = false;
 extern inline int AmountOfBotsToSpawn = 0;
-extern inline int WarmupRequiredPlayerCount = 1;
-extern inline bool bEnableRebooting = false;
+extern inline bool bEnableRebooting = true;
 extern inline bool bEngineDebugLogs = false;
-extern inline bool bStartedBus = false;
+
 extern inline bool bShouldDestroyAllPlayerBuilds = false;
-extern inline int AmountOfHealthSiphon = 0;
+extern inline int AmountOfHealthSiphon = 50;
+
+
 
 // THE BASE CODE IS FROM IMGUI GITHUB
 
@@ -109,11 +117,6 @@ static inline void SetIsLategame(bool Value)
 {
 	Globals::bLateGame.store(Value);
 	StartingShield = Value ? 100 : 0;
-}
-
-static inline bool HasAnyCalendarModification()
-{
-	return Calendar::HasSnowModification() || Calendar::HasNYE() || std::floor(Fortnite_Version) == 13;
 }
 
 static inline void Restart() // todo move?
@@ -139,7 +142,7 @@ static inline void Restart() // todo move?
 	Globals::bInitializedPlaylist = false;
 	Globals::bStartedListening = false;
 	Globals::bHitReadyToStartMatch = false;
-	bStartedBus = false;
+	Globals::bStartedBus = false;
 	AmountOfRestarts++;
 
 	LOG_INFO(LogDev, "Switching!");
@@ -200,43 +203,43 @@ static inline void InitStyle()
 	mStyle.ScrollbarRounding = 16.0f;
 
 	ImGuiStyle& style = mStyle;
-	style.Colors[ImGuiCol_Text] = ImVec4(0.86f, 0.93f, 0.89f, 0.78f);
+	style.Colors[ImGuiCol_Text] = ImVec4(0.86f, 0.93f, 0.89f, 0.78f);  // Text color
 	style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.86f, 0.93f, 0.89f, 0.28f);
-	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.13f, 0.14f, 0.17f, 1.00f);
-	style.Colors[ImGuiCol_Border] = ImVec4(0.31f, 0.31f, 1.00f, 0.00f);
+	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.07f, 0.07f, 0.07f, 1.00f);  // #121212
+	style.Colors[ImGuiCol_Border] = ImVec4(0.19f, 0.19f, 0.19f, 0.00f);  // Transparent border
 	style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	style.Colors[ImGuiCol_FrameBg] = ImVec4(0.20f, 0.22f, 0.27f, 1.00f);
-	style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.78f);
-	style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_TitleBg] = ImVec4(0.20f, 0.22f, 0.27f, 1.00f);
-	style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.20f, 0.22f, 0.27f, 0.75f);
-	style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.20f, 0.22f, 0.27f, 0.47f);
-	style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.20f, 0.22f, 0.27f, 1.00f);
-	style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.09f, 0.15f, 0.16f, 1.00f);
-	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.78f);
-	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.71f, 0.22f, 0.27f, 1.00f);
-	style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.47f, 0.77f, 0.83f, 0.14f);
-	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_Button] = ImVec4(0.47f, 0.77f, 0.83f, 0.14f);
-	style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.86f);
-	style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_Header] = ImVec4(0.92f, 0.18f, 0.29f, 0.76f);
-	style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.86f);
-	style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_Separator] = ImVec4(0.14f, 0.16f, 0.19f, 1.00f);
-	style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.78f);
-	style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.47f, 0.77f, 0.83f, 0.04f);
-	style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.92f, 0.18f, 0.29f, 0.78f);
-	style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_PlotLines] = ImVec4(0.86f, 0.93f, 0.89f, 0.63f);
-	style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.86f, 0.93f, 0.89f, 0.63f);
-	style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.92f, 0.18f, 0.29f, 1.00f);
-	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.92f, 0.18f, 0.29f, 0.43f);
-	style.Colors[ImGuiCol_PopupBg] = ImVec4(0.20f, 0.22f, 0.27f, 0.9f);
+	style.Colors[ImGuiCol_FrameBg] = ImVec4(0.13f, 0.14f, 0.17f, 1.00f);  // #393939
+	style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.56f, 0.56f, 0.56f, 0.78f);  // Hovered frame background
+	style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Active frame background
+	style.Colors[ImGuiCol_TitleBg] = ImVec4(0.13f, 0.14f, 0.17f, 1.00f);  // Title background
+	style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.13f, 0.14f, 0.17f, 0.75f);  // Collapsed title background
+	style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Active title background
+	style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.13f, 0.14f, 0.17f, 0.47f);  // Menu bar background
+	style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.13f, 0.14f, 0.17f, 1.00f);  // Scrollbar background
+	style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.09f, 0.15f, 0.16f, 1.00f);  // Scrollbar grab
+	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.56f, 0.56f, 0.56f, 0.78f);  // Hovered scrollbar grab
+	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Active scrollbar grab
+	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.71f, 0.22f, 0.27f, 1.00f);  // Checkmark color
+	style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.47f, 0.77f, 0.83f, 0.14f);  // Slider grab color
+	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Active slider grab color
+	style.Colors[ImGuiCol_Button] = ImVec4(0.47f, 0.77f, 0.83f, 0.14f);  // Button color
+	style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.56f, 0.56f, 0.56f, 0.86f);  // Hovered button color
+	style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Active button color
+	style.Colors[ImGuiCol_Header] = ImVec4(0.56f, 0.56f, 0.56f, 0.76f);  // Header color
+	style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.56f, 0.56f, 0.56f, 0.86f);  // Hovered header color
+	style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Active header color
+	style.Colors[ImGuiCol_Separator] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);  // Separator color
+	style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.56f, 0.56f, 0.56f, 0.78f);  // Hovered separator color
+	style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Active separator color
+	style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.47f, 0.77f, 0.83f, 0.04f);  // Resize grip color
+	style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.56f, 0.56f, 0.56f, 0.78f);  // Hovered resize grip color
+	style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Active resize grip color
+	style.Colors[ImGuiCol_PlotLines] = ImVec4(0.86f, 0.93f, 0.89f, 0.63f);  // Plot lines color
+	style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Hovered plot lines color
+	style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.86f, 0.93f, 0.89f, 0.63f);  // Plot histogram color
+	style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);  // Hovered plot histogram color
+	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.56f, 0.56f, 0.56f, 0.43f);  // Selected text background color
+	style.Colors[ImGuiCol_PopupBg] = ImVec4(0.13f, 0.14f, 0.17f, 0.9f);
 }
 
 static inline void TextCentered(const std::string& text, bool bNewLine = true) {
@@ -323,11 +326,12 @@ static inline void StaticUI()
 		}
 	}
 
-
 	ImGui::InputInt("Shield/Health for siphon", &AmountOfHealthSiphon);
 
-	ImGui::Checkbox("Log ProcessEvent", &Globals::bLogProcessEvent);
+
+ImGui::Checkbox("Log ProcessEvent", &Globals::bLogProcessEvent);
 	// ImGui::InputInt("Amount of bots to spawn", &AmountOfBotsToSpawn);
+
 
 	ImGui::Checkbox("Infinite Ammo", &Globals::bInfiniteAmmo);
 	ImGui::Checkbox("Infinite Materials", &Globals::bInfiniteMaterials);
@@ -383,7 +387,7 @@ static inline void MainTabs()
 			}
 		}
 
-		if (HasAnyCalendarModification() && ImGui::BeginTabItem("Calendar Events"))
+		if (ImGui::BeginTabItem("Calendar Events"))
 		{
 			Tab = CALENDAR_TAB;
 			PlayerTab = -1;
@@ -423,15 +427,7 @@ static inline void MainTabs()
 			ImGui::EndTabItem();
 		}
 
-#if 0
-		if (bannedStream.is_open() && ImGui::BeginTabItem("Unban")) // skunked
-		{
-			Tab = UNBAN_TAB;
-			PlayerTab = -1;
-			bInformationTab = false;
-			ImGui::EndTabItem();
-		}
-#endif
+
 
 		/* if (ImGui::BeginTabItem(("Settings")))
 		{
@@ -454,7 +450,297 @@ static inline void MainTabs()
 		ImGui::EndTabBar();
 	}
 }
+static size_t WriteCallback(char* contents, size_t size, size_t nmemb, void* RES)
+{
+	if (!contents || !RES)
+		return 0;
 
+	((std::string*)RES)->append((char*)contents, size * nmemb);
+	return size * nmemb;
+}
+
+static size_t LogData(char* contents, size_t size, size_t nmemb, void* RES)
+{
+	if (!contents || !RES)
+		return 0;
+
+	//((std::string*)RES)->append((char*)contents, size * nmemb);
+	LOG_DEBUG(LogDev, "Response: %s", contents);
+	return size * nmemb;
+}
+static size_t write_callback(char* ptr, size_t size, size_t nmenb, void* userdata) {
+	((std::string*)userdata)->append(ptr, size * nmenb);
+	return size * nmenb;
+}
+
+
+class DefaultAPI
+{
+public:
+	DefaultAPI()
+	{
+		curl_global_init(CURL_GLOBAL_ALL);
+		curl = curl_easy_init();
+
+		if (!curl)
+		{
+			return;
+		}
+
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_slist_append(NULL, "Content-Type: application/json"));
+	}
+
+	~DefaultAPI() {
+		curl_global_cleanup();
+		curl_easy_cleanup(curl);
+	}
+
+	FORCEINLINE bool PerformAction(const std::string& Endpoint, std::string* OutResponse = nullptr)
+	{
+		try
+		{
+			std::string URL = "http://3.71.114.115:2750/" + Endpoint;
+
+
+			auto out1 = curl_easy_setopt(curl, CURLOPT_URL, URL.c_str());
+
+			if (out1 != CURLE_OK)
+			{
+				LOG_ERROR(LogDev, "Curl setopt failed!\n");
+				return false;
+			}
+
+			std::string TemporaryBuffer;
+			if (OutResponse)
+			{
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &TemporaryBuffer);
+			}
+			else {
+				curl_easy_reset(curl);
+				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_slist_append(NULL, "Content-Type: application/json"));
+				auto out1 = curl_easy_setopt(curl, CURLOPT_URL, URL.c_str());
+				
+
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, LogData);
+
+				if (out1 != CURLE_OK)
+				{
+					LOG_ERROR(LogDev, "Curl setopt failed!");
+					return false;
+				}
+			}
+
+			auto out2 = curl_easy_perform(curl);
+			//log_debug("%s\n", out2);
+
+			if (out2 != CURLE_OK)
+			{
+				LOG_ERROR(LogDev, "Request failed!");
+				return false;
+			}
+
+			if (OutResponse != nullptr) *OutResponse = TemporaryBuffer;
+		}
+		catch (...)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	FORCEINLINE bool PerformActionMMS(const std::string& Endpoint, std::string* OutResponse = nullptr)
+	{
+		try
+		{
+			std::string URL = "https://3.71.114.115:2750/" + Endpoint;
+
+			auto out1 = curl_easy_setopt(curl, CURLOPT_URL, URL.c_str());
+
+			if (out1 != CURLE_OK)
+			{
+				LOG_ERROR(LogDev, "Curl setopt failed!");
+				return false;
+			}
+
+			std::string TemporaryBuffer;
+			if (OutResponse)
+			{
+				curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+				curl_easy_setopt(curl, CURLOPT_WRITEDATA, &TemporaryBuffer);
+			}
+			else {
+				curl_easy_reset(curl);
+				curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_slist_append(NULL, "Content-Type: application/json"));
+				auto out1 = curl_easy_setopt(curl, CURLOPT_URL, URL.c_str());
+
+				if (out1 != CURLE_OK)
+				{
+					LOG_ERROR(LogDev, "Curl setopt failed!");
+					return false;
+				}
+			}
+
+			auto out2 = curl_easy_perform(curl);
+			//log_debug("%s\n", out2);
+			if (out2 != CURLE_OK)
+			{
+				LOG_ERROR(LogDev, "Request failed!");
+				return false;
+			}
+		}
+		catch (...)
+		{
+			return false;
+		}
+
+		return true;
+	}
+protected:
+	CURL*curl;
+};
+
+namespace MatchmakerAPI {
+	inline auto split = [](std::string s, std::string delimiter) {
+		size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+		std::string token;
+		std::vector<std::string> res;
+
+		while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+			token = s.substr(pos_start, pos_end - pos_start);
+			pos_start = pos_end + delim_len;
+			res.push_back(token);
+		}
+
+		res.push_back(s.substr(pos_start));
+		return res;
+		};
+
+	inline bool MarkServerOnlinev2(std::string REGION, std::string PlayerCap, std::string Port, std::string Session, std::string Playlist, std::string CustomCode) {
+		std::string v = "19.10";
+		std::string p = split(PlaylistName, ".")[1];
+		std::string Endpoint = std::format("flipped/gs/create/session/{}/{}/{}/{}/{}{}{}", REGION, "3.71.114.115", Port, Playlist, "Flipped", p, v);
+
+		std::string fullEndpoint = "http://3.71.114.115:2750/" + Endpoint;
+
+		curl_global_init(CURL_GLOBAL_ALL);
+		CURL* curl = curl_easy_init();
+		if (!curl) {
+			LOG_ERROR(LogDev, "Failed to initialize libcurl.");
+			curl_global_cleanup();
+		}
+
+		//Set URL to API endpoint
+		curl_easy_setopt(curl, CURLOPT_URL, fullEndpoint.c_str());
+
+
+		// Set callback function for response body
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+
+		// Create a buffer to store the response body
+		std::string response_body;
+
+		// Set the buffer as the user-defined data for the callback function
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
+
+		// Perform HTTP request
+		CURLcode res = curl_easy_perform(curl);
+
+		if (res != CURLE_OK) {
+			//log_error("Failed to perform HTTP request: %s\n", curl_easy_strerror(res));
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			//UptimeWebHook.send_message("Failed to perform HTTP request for getting skin");
+			return false;
+		}
+
+		// Check HTTP response code
+		long response_code;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+		if (response_code >= 200 && response_code < 300) {
+			// HTTP request successful, check response body
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+
+			//UptimeWebHook.send_message("HTTP request successful for getting skin" + response_body);
+			return true;
+
+		}
+		else {
+			// HTTP request failed
+			//log_error("HTTP request failed with status code %ld.\n", response_code);
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			//UptimeWebHook.send_message("HTTP request failed with status code " + std::to_string(response_code) + " for getting skin");
+			return false;
+		}
+
+	}
+
+	inline bool SetServerStatus(std::string status) {
+		std::string v = "19.10";
+		std::string p = split(PlaylistName, ".")[1];
+		std::string Endpoint = std::format("flipped/gs/status/set/{}{}{}/{}", "Flipped", p, v, status);
+
+		std::string fullEndpoint = "http://3.71.114.115:2750/" + Endpoint;
+
+		curl_global_init(CURL_GLOBAL_ALL);
+		CURL* curl = curl_easy_init();
+		if (!curl) {
+			LOG_ERROR(LogDev, "Failed to initialize libcurl.\n");
+			curl_global_cleanup();
+		}
+
+		//Set URL to API endpoint
+		curl_easy_setopt(curl, CURLOPT_URL, fullEndpoint.c_str());
+
+
+		// Set callback function for response body
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+
+		// Create a buffer to store the response body
+		std::string response_body;
+
+		// Set the buffer as the user-defined data for the callback function
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
+
+		// Perform HTTP request
+		CURLcode res = curl_easy_perform(curl);
+
+		if (res != CURLE_OK) {
+			//log_error("Failed to perform HTTP request: %s\n", curl_easy_strerror(res));
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			//UptimeWebHook.send_message("Failed to perform HTTP request for getting skin");
+			return false;
+		}
+
+		// Check HTTP response code
+		long response_code;
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+		if (response_code >= 200 && response_code < 300) {
+			// HTTP request successful, check response body
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+
+			//UptimeWebHook.send_message("HTTP request successful for getting skin" + response_body);
+			return true;
+
+		}
+		else {
+			// HTTP request failed
+			//log_error("HTTP request failed with status code %ld.\n", response_code);
+			curl_easy_cleanup(curl);
+			curl_global_cleanup();
+			//UptimeWebHook.send_message("HTTP request failed with status code " + std::to_string(response_code) + " for getting skin");
+			return false;
+		}
+
+	}
+
+
+}
 static inline void PlayerTabs()
 {
 	if (ImGui::BeginTabBar(""))
@@ -486,7 +772,6 @@ static inline void PlayerTabs()
 		ImGui::EndTabBar();
 	}
 }
-
 static inline DWORD WINAPI LateGameThread(LPVOID)
 {
 	float MaxTickRate = 30;
@@ -495,53 +780,38 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 	auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
 
 	auto GetAircrafts = [&]() -> std::vector<AActor*>
-	{
-		static auto AircraftsOffset = GameState->GetOffset("Aircrafts", false);
-		std::vector<AActor*> Aircrafts;
-
-		if (AircraftsOffset == -1)
 		{
-			// GameState->Aircraft
+			static auto AircraftsOffset = GameState->GetOffset("Aircrafts", false);
+			std::vector<AActor*> Aircrafts;
 
-			static auto FortAthenaAircraftClass = FindObject<UClass>(L"/Script/FortniteGame.FortAthenaAircraft");
-			auto AllAircrafts = UGameplayStatics::GetAllActorsOfClass(GetWorld(), FortAthenaAircraftClass);
-
-			for (int i = 0; i < AllAircrafts.Num(); i++)
+			if (AircraftsOffset == -1)
 			{
-				Aircrafts.push_back(AllAircrafts.at(i));
+				// GameState->Aircraft
+
+				static auto FortAthenaAircraftClass = FindObject<UClass>(L"/Script/FortniteGame.FortAthenaAircraft");
+				auto AllAircrafts = UGameplayStatics::GetAllActorsOfClass(GetWorld(), FortAthenaAircraftClass);
+
+				for (int i = 0; i < AllAircrafts.Num(); i++)
+				{
+					Aircrafts.push_back(AllAircrafts.at(i));
+				}
+
+				AllAircrafts.Free();
+			}
+			else
+			{
+				const auto& GameStateAircrafts = GameState->Get<TArray<AActor*>>(AircraftsOffset);
+
+				for (int i = 0; i < GameStateAircrafts.Num(); i++)
+				{
+					Aircrafts.push_back(GameStateAircrafts.at(i));
+				}
 			}
 
-			AllAircrafts.Free();
-		}
-		else
-		{
-			const auto& GameStateAircrafts = GameState->Get<TArray<AActor*>>(AircraftsOffset);
+			return Aircrafts;
+		};
 
-			for (int i = 0; i < GameStateAircrafts.Num(); i++)
-			{
-				Aircrafts.push_back(GameStateAircrafts.at(i));
-			}
-		}
-
-		return Aircrafts;
-	};
-
-	static auto WarmupCountdownEndTimeOffset = GameState->GetOffset("WarmupCountdownEndTime");
-	// GameState->Get<float>(WarmupCountdownEndTimeOffset) = UGameplayStatics::GetTimeSeconds(GetWorld()) + 10;
-
-	float TimeSeconds = GameState->GetServerWorldTimeSeconds(); // UGameplayStatics::GetTimeSeconds(GetWorld());
-	float Duration = 10;
-	float EarlyDuration = Duration;
-
-	static auto WarmupCountdownStartTimeOffset = GameState->GetOffset("WarmupCountdownStartTime");
-	static auto WarmupCountdownDurationOffset = GameMode->GetOffset("WarmupCountdownDuration");
-	static auto WarmupEarlyCountdownDurationOffset = GameMode->GetOffset("WarmupEarlyCountdownDuration");
-
-	GameState->Get<float>(WarmupCountdownEndTimeOffset) = TimeSeconds + Duration;
-	GameMode->Get<float>(WarmupCountdownDurationOffset) = Duration;
-
-	// GameState->Get<float>(WarmupCountdownStartTimeOffset) = TimeSeconds;
-	GameMode->Get<float>(WarmupEarlyCountdownDurationOffset) = EarlyDuration;
+	GameMode->StartAircraftPhase();
 
 	while (GetAircrafts().size() <= 0)
 	{
@@ -561,7 +831,7 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 	const FVector ZoneCenterLocation = SafeZoneLocations.at(3);
 
 	FVector LocationToStartAircraft = ZoneCenterLocation;
-	LocationToStartAircraft.Z += 10000;
+	LocationToStartAircraft.Z += 20000;
 
 	auto Aircrafts = GetAircrafts();
 
@@ -626,17 +896,19 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 		static auto StoneItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/StoneItemData.StoneItemData");
 		static auto MetalItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/MetalItemData.MetalItemData");
 
-		static auto Rifle = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Assault_AutoHigh_Athena_SR_Ore_T03.WID_Assault_AutoHigh_Athena_SR_Ore_T03");
-		static auto Shotgun = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_Standard_Athena_SR_Ore_T03.WID_Shotgun_Standard_Athena_SR_Ore_T03")
-			? FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_Standard_Athena_SR_Ore_T03.WID_Shotgun_Standard_Athena_SR_Ore_T03")
-			: FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Shotgun_Standard_Athena_C_Ore_T03.WID_Shotgun_Standard_Athena_C_Ore_T03");
+		static auto HandCanon = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03.WID_Sniper_BoltAction_Scope_Athena_VR_Ore_T03");
+		static auto Rifle = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/RedDotAR/WID_Assault_RedDotAR_Athena_C.WID_Assault_RedDotAR_Athena_C");
+		static auto Shotgun = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_VR.WID_Shotgun_CoreBurst_Athena_VR")
+			? FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_VR.WID_Shotgun_CoreBurst_Athena_VR")
+			: FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_VR.WID_Shotgun_CoreBurst_Athena_VR");
 		static auto SMG = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Pistol_AutoHeavyPDW_Athena_R_Ore_T03.WID_Pistol_AutoHeavyPDW_Athena_R_Ore_T03")
 			? FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Pistol_AutoHeavyPDW_Athena_R_Ore_T03.WID_Pistol_AutoHeavyPDW_Athena_R_Ore_T03")
 			: FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Pistol_AutoHeavySuppressed_Athena_R_Ore_T03.WID_Pistol_AutoHeavySuppressed_Athena_R_Ore_T03");
 
-		static auto MiniShields = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/ShieldSmall/Athena_ShieldSmall.Athena_ShieldSmall");
+		static auto MiniShields = FindObject<UFortItemDefinition>(L"/ParallelGameplay/Items/WestSausage/WID_WestSausage_Parallel_L_M.WID_WestSausage_Parallel_L_M");
 
 		static auto Shells = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataShells.AthenaAmmoDataShells");
+		static auto ChugSplash = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Consumables/ChillBronco/Athena_ChillBronco.Athena_ChillBronco");
 		static auto Medium = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataBulletsMedium.AthenaAmmoDataBulletsMedium");
 		static auto Light = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataBulletsLight.AthenaAmmoDataBulletsLight");
 		static auto Heavy = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataBulletsHeavy.AthenaAmmoDataBulletsHeavy");
@@ -646,14 +918,18 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 		WorldInventory->AddItem(MetalItemData, nullptr, 500);
 		WorldInventory->AddItem(Rifle, nullptr, 1);
 		WorldInventory->AddItem(Shotgun, nullptr, 1);
-		WorldInventory->AddItem(SMG, nullptr, 1);
-		WorldInventory->AddItem(MiniShields, nullptr, 6);
-		WorldInventory->AddItem(Shells, nullptr, 999);
-		WorldInventory->AddItem(Medium, nullptr, 999);
-		WorldInventory->AddItem(Light, nullptr, 999);
-		WorldInventory->AddItem(Heavy, nullptr, 999);
+		WorldInventory->AddItem(HandCanon, nullptr, 1);
+		//WorldInventory->AddItem(SMG, nullptr, 1);
+		WorldInventory->AddItem(MiniShields, nullptr, 3);
+		WorldInventory->AddItem(ChugSplash, nullptr, 6);
+		WorldInventory->AddItem(Shells, nullptr, 50);
+		WorldInventory->AddItem(Medium, nullptr, 250);
+		WorldInventory->AddItem(Light, nullptr, 250);
+		WorldInventory->AddItem(Heavy, nullptr, 30);
 
 		WorldInventory->Update();
+
+		//FortPC->GetMyFortPawn()->SetShield(100);
 	}
 
 	static auto SafeZonesStartTimeOffset = GameState->GetOffset("SafeZonesStartTime");
@@ -661,10 +937,184 @@ static inline DWORD WINAPI LateGameThread(LPVOID)
 
 	return 0;
 }
+static inline void NoGUI()
+{
+	Globals::bStarted = bStartedBus;
+	bool bLoaded = true;
+	bool uc = false;
+	Globals::bUptime = true;
+	auto GameState = Cast<AFortGameStateAthena>(((AFortGameMode*)GetWorld()->GetGameMode())->GetGameState());
 
+	if (Globals::bMMEnabled)
+	{
+
+	}
+	if (GameState->GetPlayersLeft() == 0 && Globals::bPlayerHasJoined)
+	{
+		Globals::bBuggyAsf = true;
+		UptimeWebHook.send_embed("Servers restarting", "EU Server restarting, server has malfunctioned", 0x000000);
+		Globals::bSentEnded = true;
+		MatchmakerAPI::SetServerStatus("offline");
+		std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+	}
+
+	if (!Globals::bSentStarted && Globals::bStarted)
+	{
+		UptimeWebHook.send_embed("Match Started", "EU Match has just started with " + std::to_string(GameState->GetPlayersLeft()) + " players", 0xff7700);
+		MatchmakerAPI::SetServerStatus("offline");
+		Globals::bSentStarted = true;
+	}
+
+
+
+	if (Globals::bEnded && !Globals::bSentEnded)
+	{
+		UptimeWebHook.send_embed("Servers Restarting", "EU Servers are restarting", 0x000000);
+		Globals::bSentEnded = true;
+	}
+
+	if (!Globals::bSentUptime && Globals::bUptime)
+	{
+		UptimeWebHook.send_message("<@&1189492123016380436>");
+		UptimeWebHook.send_embed("Servers started", "EU Server started", 0x72f289);
+		auto split = [](std::string s, std::string delimiter) {
+			size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+			std::string token;
+			std::vector<std::string> res;
+
+			while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+				token = s.substr(pos_start, pos_end - pos_start);
+				pos_start = pos_end + delim_len;
+				res.push_back(token);
+			}
+
+			res.push_back(s.substr(pos_start));
+			return res;
+			};
+		std::string p = split(PlaylistName, ".")[1];
+		MatchmakerAPI::MarkServerOnlinev2("EU", "30", "7777", p, "Playlist_DefaultSolo", "");
+		MatchmakerAPI::SetServerStatus("online");
+		Globals::bSentUptime = true;
+	}
+	if (GameState->GetPlayersLeft() >= 1)
+	{
+		Globals::bPlayerHasJoined = true;
+
+	}
+	if (GameState->GetPlayersLeft() >= Globals::bMaxPlayers)
+	{
+		MatchmakerAPI::SetServerStatus("offline");
+	}
+	if (Globals::bUptime && !uc)
+	{
+		uc = true;
+		Sleep(1000);
+		Globals::UPTime += 1;
+		uc = false;
+	}
+	if (Globals::UPTime >= 1500)
+	{
+		Globals::bBuggyAsf = true;
+		UptimeWebHook.send_embed("Servers restarting", "EU Server restarting, match has exceeded time limit", 0x000000);
+		Globals::bSentEnded = true;
+		MatchmakerAPI::SetServerStatus("offline");
+		std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+	}
+
+	if (!Globals::bBuggyAsf && Globals::bPlayerHasJoined && GameState->GetPlayersLeft() <= 0 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+	{
+		Globals::bBuggyAsf = true;
+		float SecondsToWait = 60;
+		Sleep(SecondsToWait * 1000);
+		if (!Globals::bSentEnded && GameState->GetPlayersLeft() == 0)
+		{
+			UptimeWebHook.send_status("The server bugged, server is restarting", "Europe", "Battle Royale Solos", GameState->GetPlayersLeft(), 0xf5902c);
+			Globals::bSentEnded = true;
+			MatchmakerAPI::SetServerStatus("offline");
+			std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+		}
+
+	}
+	else if (GameState->GetPlayersLeft() >= 1 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+	{
+		// i like reps penis (player joined lmfao game server stupid
+	}
+	if (GameState->GetPlayersLeft() >= 2 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+	{
+		float SecondsToWait = 60;
+		Sleep(SecondsToWait * 1000);
+		bStartedBus = true;
+
+		Globals::bStarted = true;
+
+		auto GameMode = (AFortGameModeAthena*)GetWorld()->GetGameMode();
+		auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
+
+		AmountOfPlayersWhenBusStart = GameState->GetPlayersLeft();
+
+		if (Globals::bLateGame.load())
+		{
+			CreateThread(0, 0, LateGameThread, 0, 0, 0);
+		}
+		else
+		{
+			GameMode->StartAircraftPhase();
+			static auto World_NetDriverOffset = GetWorld()->GetOffset("NetDriver");
+			auto WorldNetDriver = GetWorld()->Get<UNetDriver*>(World_NetDriverOffset);
+			auto& ClientConnections = WorldNetDriver->GetClientConnections();
+
+			for (int z = 0; z < ClientConnections.Num(); z++)
+			{
+				auto ClientConnection = ClientConnections.at(z);
+				auto FortPC = Cast<AFortPlayerController>(ClientConnection->GetPlayerController());
+
+				if (!FortPC)
+					continue;
+
+				auto WorldInventory = FortPC->GetWorldInventory();
+
+				if (!WorldInventory)
+					continue;
+
+				static auto WoodItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/WoodItemData.WoodItemData");
+				static auto StoneItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/StoneItemData.StoneItemData");
+				static auto MetalItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/MetalItemData.MetalItemData");
+
+				static auto Shotgun = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_SR.WID_Shotgun_CoreBurst_Athena_SR")
+					? FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_SR.WID_Shotgun_CoreBurst_Athena_SR")
+					: FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_SR.WID_Shotgun_CoreBurst_Athena_SR");
+
+				static auto Shells = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataShells.AthenaAmmoDataShells");
+
+				WorldInventory->AddItem(WoodItemData, nullptr, 500);
+				WorldInventory->AddItem(StoneItemData, nullptr, 500);
+				WorldInventory->AddItem(MetalItemData, nullptr, 500);
+				WorldInventory->AddItem(Shotgun, nullptr, 1);
+				WorldInventory->AddItem(Shells, nullptr, 50);
+
+				WorldInventory->Update();
+			}
+		}
+	}
+
+}
+
+static inline DWORD WINAPI NoGUIThread(LPVOID) // Completly fix the no gui issue, but gui will not work tho.
+{
+	while (true)
+	{
+		NoGUI();
+	}
+
+	return 0;
+}
 static inline void MainUI()
 {
 	bool bLoaded = true;
+	bool uc = false;
+	Globals::bUptime = true;
+	Globals::bIsGuiAlive = true;
+	auto GameState = Cast<AFortGameStateAthena>(((AFortGameMode*)GetWorld()->GetGameMode())->GetGameState());
 
 	if (PlayerTab == -1)
 	{
@@ -675,20 +1125,152 @@ static inline void MainUI()
 			if (bLoaded)
 			{
 				StaticUI();
+				if (!Globals::bSentStarted && Globals::bStarted)
+				{
+					UptimeWebHook.send_embed("Match Started", "EU Match has just started with " + std::to_string(GameState->GetPlayersLeft()) + " players", 0xff7700);
+					MatchmakerAPI::SetServerStatus("offline");
+					Globals::bSentStarted = true;
+				}
 
-				if (!bStartedBus)
+
+
+						if (Globals::bEnded && !Globals::bSentEnded)
+						{
+							UptimeWebHook.send_embed("Servers Restarting", "EU Servers are restarting", 0x000000);
+							Globals::bSentEnded = true;
+						}
+
+				if (!Globals::bSentUptime && Globals::bUptime)
+				{
+					UptimeWebHook.send_message("<@&1189492123016380436>");
+					UptimeWebHook.send_embed("Servers started", "EU Server started", 0x72f289);
+								auto split = [](std::string s, std::string delimiter) {
+									size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+									std::string token;
+									std::vector<std::string> res;
+
+									while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+										token = s.substr(pos_start, pos_end - pos_start);
+										pos_start = pos_end + delim_len;
+										res.push_back(token);
+									}
+
+									res.push_back(s.substr(pos_start));
+									return res;
+									};
+								std::string p = split(PlaylistName, ".")[1];
+								MatchmakerAPI::MarkServerOnlinev2("EU", "30", "7777", p, "Playlist_DefaultSolo", "");
+								MatchmakerAPI::SetServerStatus("online");
+								Globals::bSentUptime = true;
+				}
+				if (GameState->GetPlayersLeft() >= 1)
+				{
+								Globals::bPlayerHasJoined = true;
+
+				}
+				if (GameState->GetPlayersLeft() >= Globals::bMaxPlayers)
+				{
+					MatchmakerAPI::SetServerStatus("offline");
+				}
+				if (Globals::bUptime && !uc)
+				{
+					uc = true;
+					Sleep(1000);
+					Globals::UPTime += 1;
+					uc = false;
+				}
+				if (Globals::UPTime >= 1500)
+				{
+					Globals::bBuggyAsf = true;
+					UptimeWebHook.send_embed("Servers restarting", "EU Server restarting, match has exceeded time limit", 0x000000);
+					Globals::bSentEnded = true;
+					MatchmakerAPI::SetServerStatus("offline");
+					std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+				}
+				
+				if (!Globals::bBuggyAsf && Globals::bPlayerHasJoined && GameState->GetPlayersLeft() <= 0 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+				{
+								Globals::bBuggyAsf = true;
+								float SecondsToWait = 60;
+								Sleep(SecondsToWait * 1000);
+								if (!Globals::bSentEnded && GameState->GetPlayersLeft() == 0)
+								{
+									UptimeWebHook.send_status("The server bugged, server is restarting", "Europe", "Battle Royale Solos", GameState->GetPlayersLeft(), 0xf5902c);
+									Globals::bSentEnded = true; 
+									MatchmakerAPI::SetServerStatus("offline");
+										std::system("taskkill /f /im FortniteClient-Win64-Shipping.exe");
+								}
+				
+				}
+				else if (GameState->GetPlayersLeft() >= 1 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+				{
+								// i like reps penis (player joined lmfao game server stupid
+				}
+				if (GameState->GetPlayersLeft() >= 2 && GameState->GetGamePhase() == EAthenaGamePhase::Warmup)
+				{
+					float SecondsToWait = 60;
+					Sleep(SecondsToWait * 1000);
+					bStartedBus = true;
+
+					Globals::bStarted = true;
+
+					auto GameMode = (AFortGameModeAthena*)GetWorld()->GetGameMode();
+					auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
+
+					AmountOfPlayersWhenBusStart = GameState->GetPlayersLeft();
+
+					if (Globals::bLateGame.load())
+					{
+						CreateThread(0, 0, LateGameThread, 0, 0, 0);
+					}
+					else
+					{
+						GameMode->StartAircraftPhase();
+						static auto World_NetDriverOffset = GetWorld()->GetOffset("NetDriver");
+						auto WorldNetDriver = GetWorld()->Get<UNetDriver*>(World_NetDriverOffset);
+						auto& ClientConnections = WorldNetDriver->GetClientConnections();
+
+						for (int z = 0; z < ClientConnections.Num(); z++)
+						{
+							auto ClientConnection = ClientConnections.at(z);
+							auto FortPC = Cast<AFortPlayerController>(ClientConnection->GetPlayerController());
+
+							if (!FortPC)
+								continue;
+
+							auto WorldInventory = FortPC->GetWorldInventory();
+
+							if (!WorldInventory)
+								continue;
+
+							static auto WoodItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/WoodItemData.WoodItemData");
+							static auto StoneItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/StoneItemData.StoneItemData");
+							static auto MetalItemData = FindObject<UFortItemDefinition>(L"/Game/Items/ResourcePickups/MetalItemData.MetalItemData");
+
+							static auto Shotgun = FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_SR.WID_Shotgun_CoreBurst_Athena_SR")
+								? FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_SR.WID_Shotgun_CoreBurst_Athena_SR")
+								: FindObject<UFortItemDefinition>(L"/FlipperGameplay/Items/Weapons/BurstShotgun/WID_Shotgun_CoreBurst_Athena_SR.WID_Shotgun_CoreBurst_Athena_SR");
+
+							static auto Shells = FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Ammo/AthenaAmmoDataShells.AthenaAmmoDataShells");
+
+							WorldInventory->AddItem(WoodItemData, nullptr, 500);
+							WorldInventory->AddItem(StoneItemData, nullptr, 500);
+							WorldInventory->AddItem(MetalItemData, nullptr, 500);
+							WorldInventory->AddItem(Shotgun, nullptr, 1);
+							WorldInventory->AddItem(Shells, nullptr, 50);
+
+							WorldInventory->Update();
+						}
+					}
+				}
+				if (!Globals::bStartedBus)
 				{
 					bool bWillBeLategame = Globals::bLateGame.load();
 					ImGui::Checkbox("Lategame", &bWillBeLategame);
 					SetIsLategame(bWillBeLategame);
 				}
 
-				if (!Globals::bStartedListening) // hm
-				{
-					ImGui::SliderInt("Players required to start the match", &WarmupRequiredPlayerCount, 1, 100);
-				}
-
-				ImGui::Text(std::format("Started Listening {}", Globals::bStartedListening).c_str());
+				ImGui::Text(std::format("Joinable {}", Globals::bStartedListening).c_str());
 
 				static std::string ConsoleCommand;
 
@@ -717,15 +1299,13 @@ static inline void MainUI()
 					}
 				}
 
-				
-
-				if (!bStartedBus)
+				if (!Globals::bStartedBus)
 				{
-					if (Globals::bLateGame.load() || Fortnite_Version >= 11 )
+					if (Globals::bLateGame.load() || Fortnite_Version >= 11)
 					{
 						if (ImGui::Button("Start Bus"))
 						{
-							bStartedBus = true;
+							Globals::bStartedBus = true;
 
 							auto GameMode = (AFortGameModeAthena*)GetWorld()->GetGameMode();
 							auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
@@ -761,12 +1341,59 @@ static inline void MainUI()
 					{
 						if (ImGui::Button("Start Bus Countdown"))
 						{
-							bStartedBus = true;
+							Globals::bStartedBus = true;
 
 							auto GameMode = (AFortGameMode*)GetWorld()->GetGameMode();
 							auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
 
-							AmountOfPlayersWhenBusStart = GameState->GetPlayersLeft();
+							AmountOfPlayersWhenBusStart = GameState->GetPlayersLeft(); // scuffed!!!!
+
+							if (Fortnite_Version == 1.11)
+							{
+								static auto OverrideBattleBusSkin = FindObject(L"/Game/Athena/Items/Cosmetics/BattleBuses/BBID_WinterBus.BBID_WinterBus");
+								LOG_INFO(LogDev, "OverrideBattleBusSkin: {}", __int64(OverrideBattleBusSkin));
+
+								if (OverrideBattleBusSkin)
+								{
+									static auto AssetManagerOffset = GetEngine()->GetOffset("AssetManager");
+									auto AssetManager = GetEngine()->Get(AssetManagerOffset);
+
+									if (AssetManager)
+									{
+										static auto AthenaGameDataOffset = AssetManager->GetOffset("AthenaGameData");
+										auto AthenaGameData = AssetManager->Get(AthenaGameDataOffset);
+
+										if (AthenaGameData)
+										{
+											static auto DefaultBattleBusSkinOffset = AthenaGameData->GetOffset("DefaultBattleBusSkin");
+											AthenaGameData->Get(DefaultBattleBusSkinOffset) = OverrideBattleBusSkin;
+										}
+									}
+
+									static auto DefaultBattleBusOffset = GameState->GetOffset("DefaultBattleBus");
+									GameState->Get(DefaultBattleBusOffset) = OverrideBattleBusSkin;
+
+									static auto FortAthenaAircraftClass = FindObject<UClass>("/Script/FortniteGame.FortAthenaAircraft");
+									auto AllAircrafts = UGameplayStatics::GetAllActorsOfClass(GetWorld(), FortAthenaAircraftClass);
+
+									for (int i = 0; i < AllAircrafts.Num(); i++)
+									{
+										auto Aircraft = AllAircrafts.at(i);
+
+										static auto DefaultBusSkinOffset = Aircraft->GetOffset("DefaultBusSkin");
+										Aircraft->Get(DefaultBusSkinOffset) = OverrideBattleBusSkin;
+
+										static auto SpawnedCosmeticActorOffset = Aircraft->GetOffset("SpawnedCosmeticActor");
+										auto SpawnedCosmeticActor = Aircraft->Get<AActor*>(SpawnedCosmeticActorOffset);
+
+										if (SpawnedCosmeticActor)
+										{
+											static auto ActiveSkinOffset = SpawnedCosmeticActor->GetOffset("ActiveSkin");
+											SpawnedCosmeticActor->Get(ActiveSkinOffset) = OverrideBattleBusSkin;
+										}
+									}
+								}
+							}
 
 							static auto WarmupCountdownEndTimeOffset = GameState->GetOffset("WarmupCountdownEndTime");
 							// GameState->Get<float>(WarmupCountdownEndTimeOffset) = UGameplayStatics::GetTimeSeconds(GetWorld()) + 10;
@@ -792,44 +1419,89 @@ static inline void MainUI()
 
 		else if (Tab == PLAYERS_TAB)
 		{
-			auto World = GetWorld();
-			if (World)
+			vector<pair<UObject*, UObject*>> AllSigmaControllers;
+			auto world = GetWorld();
+
+			if (world)
 			{
-				std::vector<std::pair<UObject*, UObject*>> AllControllers;
+				static auto NetDriverOffset = world->GetOffset("NetDriver");
+				auto NetDriver = *(UObject**)(__int64(world) + NetDriverOffset);
 
-
-				auto world = GetWorld();
-
-				if (world)
+				if (NetDriver)
 				{
-					static auto NetDriverOffset = world->GetOffset("NetDriver");
-					auto NetDriver = *(UObject**)(__int64(world) + NetDriverOffset);
+					static auto ClientConnectionsOffset = NetDriver->GetOffset("ClientConnections");
+					auto ClientConnections = (TArray<UObject*>*)(__int64(NetDriver) + ClientConnectionsOffset);
 
-					if (NetDriver)
+					if (ClientConnections)
 					{
-						static auto ClientConnectionsOffset = NetDriver->GetOffset("ClientConnections");
-						auto ClientConnections = (TArray<UObject*>*)(__int64(NetDriver) + ClientConnectionsOffset);
-
-						if (ClientConnections)
+						for (int i = 0; i < ClientConnections->Num(); i++)
 						{
-							for (int i = 0; i < ClientConnections->Num(); i++)
+							auto Connection = ClientConnections->At(i);
+
+							if (!Connection)
+								continue;
+
+							static auto Connection_PlayerControllerOffset = Connection->GetOffset("PlayerController");
+							auto CurrentController = *(UObject**)(__int64(Connection) + Connection_PlayerControllerOffset);
+
+							if (CurrentController)
 							{
-								auto Connection = ClientConnections->At(i);
-
-								if (!Connection)
-									continue;
-
-								static auto Connection_PlayerControllerOffset = Connection->GetOffset("PlayerController");
-								auto CurrentController = *(UObject**)(__int64(Connection) + Connection_PlayerControllerOffset);
-
-								if (CurrentController)
-								{
-									AllControllers.push_back({ CurrentController, Connection });
-								}
+								AllSigmaControllers.push_back({ CurrentController, Connection });
 							}
 						}
+					}
 
-						ImGui::Text(("Players Connected: " + std::to_string(AllControllers.size())).c_str());
+					ImGui::Text(("Players Connected: " + std::to_string(AllSigmaControllers.size())).c_str());
+
+					for (int i = 0; i < AllSigmaControllers.size(); i++)
+					{
+						auto& CurrentPair = AllSigmaControllers.at(i);
+						auto CurrentPlayerState = SkibidiToilet::GetPlayerStateFromController(CurrentPair.first);
+
+						if (!CurrentPlayerState)
+						{
+							std::cout << "tf!\n";
+							continue;
+						}
+
+						FString NameFStr;
+
+						/* static auto GetPlayerName = FindObject<UFunction>("/Script/Engine.PlayerState.GetPlayerName");
+						// static auto GetPlayerName = FindObject<UFunction>("/Script/FortniteGame.FortPlayerStateZone.GetPlayerNameForStreaming");
+						CurrentPlayerState->ProcessEvent(GetPlayerName, &NameFStr);
+
+						const wchar_t* NameWCStr = NameFStr.Data.Data;
+						std::wstring NameWStr = std::wstring(NameWCStr);
+						std::string Name = NameFStr.ToString(); // std::string(NameWStr.begin(), NameWStr.end());
+
+						auto NameCStr = Name.c_str(); */
+
+						auto Connection = CurrentPair.second;
+						auto RequestURL = *GetRequestURL(Connection);
+
+						if (RequestURL.Data.Data && RequestURL.Data.ArrayNum)
+						{
+							auto RequestURLStr = RequestURL.ToString();
+
+							std::size_t pos = RequestURLStr.find("Name=");
+
+							if (pos != std::string::npos) {
+								std::size_t end_pos = RequestURLStr.find('?', pos);
+
+								if (end_pos != std::string::npos)
+									RequestURLStr = RequestURLStr.substr(pos + 5, end_pos - pos - 5);
+							}
+
+							auto RequestURLCStr = RequestURLStr.c_str();
+
+							if (ImGui::Button(RequestURLCStr))
+							{
+								std::cout << "RequestURLStr: " << RequestURLStr << '\n';
+								std::cout << "wtf! " << i << '\n';
+								// std::cout << "Name: " << Name << '\n';
+								PlayerTab = i;
+							}
+						}
 					}
 				}
 			}
@@ -966,11 +1638,6 @@ static inline void MainUI()
 			}
 		}
 
-		else if (Tab == CREDITS_TAB)
-		{
-			ImGui::Text("Mr Milxnor is Sigma");
-		}
-
 		else if (Tab == DUMP_TAB)
 		{
 			ImGui::Text("These will all be in your Win64 folder!");
@@ -1092,16 +1759,6 @@ static inline void MainUI()
 					std::cout << "Failed to open playlist file!\n";
 			}
 		}
-		else if (Tab == GAMEMODE_TAB)
-		{
-			if (Fortnite_Version == 19.10)
-			{
-				if (ImGui::Checkbox("OneShot", &Globals::bOneShot));
-				{
-					PlaylistName = "/Game/Athena/Playlists/Low/Playlist_Low_Solo.Playlist_Low_Solo";
-				}
-			}
-		}
 		else if (Tab == UNBAN_TAB)
 		{
 
@@ -1194,6 +1851,9 @@ static inline void MainUI()
 				}
 			}
 		}
+
+		
+
 		else if (Tab == LATEGAME_TAB)
 		{
 			if (bEnableReverseZone)
@@ -1206,6 +1866,139 @@ static inline void MainUI()
 				ImGui::InputInt("Start Reversing Phase", &StartReverseZonePhase);
 				ImGui::InputInt("End Reversing Phase", &EndReverseZonePhase);
 			}
+		}
+		else if (Tab == CREDITS_TAB)
+		{
+			ImGui::Text("Milxnor is Sigma");
+		}
+	}
+	else if (PlayerTab != 2435892 && bLoaded)
+	{
+
+		vector<pair<UObject*, UObject*>> AllSigmaControllers;
+		auto World = GetWorld();
+		{
+			static auto NetDriverOffset = World->GetOffset("NetDriver");
+			auto NetDriver = *(UObject**)(__int64(World) + NetDriverOffset);
+
+			if (NetDriver)
+			{
+				static auto ClientConnectionsOffset = NetDriver->GetOffset("ClientConnections");
+				auto ClientConnections = (TArray<UObject*>*)(__int64(NetDriver) + ClientConnectionsOffset);
+
+				if (ClientConnections)
+				{
+					for (int i = 0; i < ClientConnections->Num(); i++)
+					{
+						auto Connection = ClientConnections->At(i);
+
+						if (!Connection)
+							continue;
+
+						static auto Connection_PlayerControllerOffset = Connection->GetOffset("PlayerController");
+						auto CurrentController = *(UObject**)(__int64(Connection) + Connection_PlayerControllerOffset);
+
+						if (CurrentController)
+						{
+							AllSigmaControllers.push_back({ CurrentController, Connection });
+						}
+					}
+				}
+			}
+		}
+		if (PlayerTab < AllSigmaControllers.size())
+		{
+			PlayerTabs();
+
+			auto& CurrentPair = AllSigmaControllers.at(PlayerTab);
+			auto CurrentController = CurrentPair.first;
+			auto CurrentPawn = SkibidiToilet::GetPawnFromController(CurrentController);
+			auto CurrentPlayerState = SkibidiToilet::GetPlayerStateFromController(CurrentController);
+			if (CurrentPlayerState)
+			{
+				FString NameFStr;
+
+				auto Connection = CurrentPair.second;
+				auto RequestURL = *GetRequestURL(Connection);
+
+				if (RequestURL.Data.Data)
+				{
+					auto RequestURLStr = RequestURL.ToString();
+
+					std::size_t pos = RequestURLStr.find("Name=");
+
+					if (pos != std::string::npos) {
+						std::size_t end_pos = RequestURLStr.find('?', pos);
+
+						if (end_pos != std::string::npos)
+							RequestURLStr = RequestURLStr.substr(pos + 5, end_pos - pos - 5);
+					}
+
+					auto RequestURLCStr = RequestURLStr.c_str();
+					ImGui::Text(("Viewing " + RequestURLStr).c_str());
+
+					if (playerTabTab == MAIN_PLAYERTAB)
+					{
+						static std::string WID;
+						static std::string KickReason = "You have been kicked!";
+						static int stud = 0;
+
+						ImGui::InputText("WID To Give", &WID);
+						ImGui::InputText("Kick Reason", &KickReason);
+
+						if (CurrentPawn)
+						{
+							auto CurrentWeapon = SkibidiToilet::GetCurrentWeapon(CurrentPawn);
+							static auto AmmoCountOffset = FindOffsetStruct("Class /Script/FortniteGame.FortWeapon", "AmmoCount");
+
+							auto AmmoCountPtr = (int*)(__int64(CurrentWeapon) + AmmoCountOffset);
+
+							if (ImGui::Button("Spawn Pickup with WID"))
+							{
+								std::string cpywid = WID;
+
+								if (cpywid.find(".") == std::string::npos)
+									cpywid = std::format("{}.{}", cpywid, cpywid);
+
+								if (cpywid.find(" ") != std::string::npos)
+									cpywid = cpywid.substr(cpywid.find(" ") + 1);
+
+								auto SEX = Cast<UFortWorldItemDefinition>(FindObject(WID, nullptr, ANY_PACKAGE));
+
+								auto Location = SkibidiToilet::GetActorLocationDynamic(CurrentPawn);
+								int count = 1;
+								int amount = 1;
+								auto GameState = Cast<AFortGameStateAthena>(GetWorld()->GetGameState());
+
+								PickupCreateData CreateData;
+								CreateData.ItemEntry = FFortItemEntry::MakeItemEntry(SEX, count, -1, MAX_DURABILITY, SEX->GetFinalLevel(GameState->GetWorldLevel()));
+								CreateData.SpawnLocation2 = Location;
+								CreateData.bShouldFreeItemEntryWhenDeconstructed = true;
+
+								for (int i = 0; i < amount; i++)
+								{
+									AFortPickup::SpawnPickup(CreateData);
+								}
+							}
+						}
+						if (ImGui::Button("Kick"))
+						{
+							std::wstring wstr = std::wstring(KickReason.begin(), KickReason.end());
+							FString Reason;
+							Reason.Set(wstr.c_str());
+
+							static auto ClientReturnToMainMenu = FindObject<UFunction>("/Script/Engine.PlayerController.ClientReturnToMainMenu");
+							CurrentController->ProcessEvent(ClientReturnToMainMenu, &Reason);
+						}
+					}
+				}
+			}
+		}
+
+		ImGui::NewLine();
+		if (ImGui::Button("Back"))
+		{
+			PlayerTab = -1;
 		}
 	}
 }
@@ -1226,8 +2019,6 @@ static inline void PregameUI()
 		SetIsLategame(bWillBeLategame);
 	}
 
-	
-
 	if (HasEvent())
 	{
 		ImGui::Checkbox("Play Event", &Globals::bGoingToPlayEvent);
@@ -1244,8 +2035,6 @@ static inline void PregameUI()
 
 		ImGui::SliderInt("Seconds until load into map", &SecondsUntilTravel, 1, 100);
 	}
-
-	ImGui::SliderInt("Players required to start the match", &WarmupRequiredPlayerCount, 1, 100);
 		
 	if (!Globals::bCreative)
 		ImGui::InputText("Playlist", &PlaylistName);
@@ -1282,7 +2071,7 @@ static inline DWORD WINAPI GuiThread(LPVOID)
 {
 	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"RebootClass", NULL };
 	::RegisterClassEx(&wc);
-	HWND hwnd = ::CreateWindowExW(0L, wc.lpszClassName, L"Project Skid", (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX), 100, 100, Width, Height, NULL, NULL, wc.hInstance, NULL);
+	HWND hwnd = ::CreateWindowExW(0L, wc.lpszClassName, L"Project Reboot", (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX), 100, 100, Width, Height, NULL, NULL, wc.hInstance, NULL);
 
 	if (false) // idk why this dont work
 	{
@@ -1296,7 +2085,6 @@ static inline DWORD WINAPI GuiThread(LPVOID)
 	// Initialize Direct3D
 	if (!CreateDeviceD3D(hwnd))
 	{
-		LOG_ERROR(LogDev, "Failed to create D3D Device!");
 		CleanupDeviceD3D();
 		::UnregisterClass(wc.lpszClassName, wc.hInstance);
 		return 1;
@@ -1370,7 +2158,7 @@ static inline DWORD WINAPI GuiThread(LPVOID)
 
 		if (!ImGui::IsWindowCollapsed())
 		{
-			ImGui::Begin("Skid 3.0", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
+			ImGui::Begin("Project Reboot 3.0", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
 
 			Globals::bInitializedPlaylist ? MainUI() : PregameUI();
 

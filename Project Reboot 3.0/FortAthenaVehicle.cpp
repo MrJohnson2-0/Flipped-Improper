@@ -6,7 +6,7 @@ UFortWeaponItemDefinition* AFortAthenaVehicle::GetVehicleWeaponForSeat(int SeatI
 
 	UFortWeaponItemDefinition* VehicleWeaponDefinition = nullptr;
 
-	LOG_INFO(LogDev, "[GetVehicleWeaponForSeat] SeatIndex: {}", SeatIdx);
+	LOG_INFO(LogDev, "SeatIndex: {}", SeatIdx);
 
 	UObject* WeaponComponent = nullptr;
 
@@ -26,8 +26,6 @@ UFortWeaponItemDefinition* AFortAthenaVehicle::GetVehicleWeaponForSeat(int SeatI
 		static auto SeatIndexOffset = FindOffsetStruct("/Script/FortniteGame.WeaponSeatDefinition", "SeatIndex");
 		static auto WeaponSeatDefinitionsOffset = WeaponComponent->GetOffset("WeaponSeatDefinitions");
 		auto& WeaponSeatDefinitions = WeaponComponent->Get<TArray<__int64>>(WeaponSeatDefinitionsOffset);
-
-		// VehicleWeaponDefinition = *(UFortWeaponItemDefinition**)(__int64(WeaponSeatDefinitions.at(SeatIdx)) + VehicleWeaponOffset);
 
 		for (int i = 0; i < WeaponSeatDefinitions.Num(); i++)
 		{

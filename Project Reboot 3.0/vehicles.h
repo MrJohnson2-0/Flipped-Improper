@@ -89,7 +89,7 @@ static inline void ServerVehicleUpdate(UObject* Context, FFrame& Stack, void* Re
 
 	VirtualFree(K2_SetWorldTransformParams, 0, MEM_RELEASE);
 
-	struct { FVector NewVel; bool bAddToCurrent; FName BoneName; } 
+	struct { FVector NewVel; bool bAddToCurrent; FName BoneName; }
 	UPrimitiveComponent_SetPhysicsLinearVelocity_Params{
 		*(FVector*)(__int64(State) + LinearVelocityOffset),
 		0,
@@ -107,7 +107,6 @@ static inline void ServerVehicleUpdate(UObject* Context, FFrame& Stack, void* Re
 	Mesh->ProcessEvent(SetPhysicsAngularVelocityFn, &UPrimitiveComponent_SetPhysicsAngularVelocity_Params);
 }
 
-/*
 static inline void AddVehicleHook()
 {
 	static auto FortAthenaVehicleDefault = FindObject(L"/Script/FortniteGame.Default__FortAthenaVehicle");
@@ -125,7 +124,6 @@ static inline void AddVehicleHook()
 			ServerVehicleUpdate, nullptr, false, true);
 	}
 }
-*/
 
 struct FVehicleWeightedDef
 {

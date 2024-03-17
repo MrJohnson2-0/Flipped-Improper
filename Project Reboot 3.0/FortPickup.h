@@ -76,6 +76,7 @@ struct PickupCreateData
 	uint8 SourceType = 0;
 	uint8 Source = 0;
 	FVector SpawnLocation = FVector(0, 0, 0);
+	BothVector SpawnLocation2 = FVector(0, 0, 0);
 	bool bShouldFreeItemEntryWhenDeconstructed = false;
 
 	~PickupCreateData()

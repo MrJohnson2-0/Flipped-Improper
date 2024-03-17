@@ -79,7 +79,6 @@ static ENetMode GetNetModeHook2() { return NetMode; }
 static bool ReturnTrueHook() { return true; }
 static bool ReturnFalseHook() { return false; }
 static int Return2Hook() { return 2; }
-static void EmptyHook() { return; }
 
 static bool NoMCPHook() { return Globals::bNoMCP; }
 static void CollectGarbageHook() { return; }
@@ -212,7 +211,7 @@ void ActivatePhaseAtIndexHook(UObject* SpecialEventScript, int Index)
     static auto OnRep_ReplicatedActivePhaseIndexFn = FindObject<UFunction>("/Script/SpecialEventGameplayRuntime.SpecialEventScript.OnRep_ReplicatedActivePhaseIndex");
     SpecialEventScript->ProcessEvent(OnRep_ReplicatedActivePhaseIndexFn);
 
-    auto& ClientConnections = GetWorld()->GetNetDriver()->GetClientConnections();
+    auto ClientConnections = GetWorld()->GetNetDriver()->GetClientConnections();
 
     // Rift Tour
     if (Fortnite_Version == 17.30)
@@ -224,6 +223,8 @@ void ActivatePhaseAtIndexHook(UObject* SpecialEventScript, int Index)
         {
             if (Index == 0) // Start of Event
             {
+                auto MasterScripting = FindObject<UObject>("/Buffet/Levels/Buffet_P.Buffet_P:PersistentLevel.BP_Event_Master_Scripting_2");
+
                 auto AllSatelliteDishes = UGameplayStatics::GetAllActorsOfClass(GetWorld(), FindObject<UClass>("/Game/Athena/Apollo/Environments/BuildingActors/Complex/Props/Apollo_Complex_Satellite_Dish_Top_01.Apollo_Complex_Satellite_Dish_Top_01_C"));
 
                 for (int i = 0; i < AllSatelliteDishes.Num(); i++)
@@ -231,117 +232,60 @@ void ActivatePhaseAtIndexHook(UObject* SpecialEventScript, int Index)
                     AllSatelliteDishes.At(i)->K2_DestroyActor();
                 }
 
-                auto AllSpecialEventMutators = UGameplayStatics::GetAllActorsOfClass(GetWorld(), FindObject<UClass>("/Script/SpecialEventGameplayRuntime.FortAthenaMutator_SpecialEvent"));
+                MasterScripting->ProcessEvent(MasterScripting->FindFunction("EnableTheMutator"));
 
-                for (int i = 0; i < AllSpecialEventMutators.Num(); i++)
+                for (int i = 0; i < ClientConnections.Num(); i++)
                 {
-                    auto CurrentSpecialEventMutator = AllSpecialEventMutators.At(i);
+                    auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
+                    auto CurrentController = ClientConnections.At(i)->GetPlayerController();
 
-                    auto ScriptActor = CurrentSpecialEventMutator->Get<AActor*>(CurrentSpecialEventMutator->GetOffset("ScriptActor"));
+                    CurrentController->AddComponentByClass(FindObject<UClass>("/Script/SpecialEventGameplayRuntime.FortControllerComponent_SpecialEvent"));
+                    CurrentPawn->AddComponentByClass(FindObject<UClass>("/Script/BuffetRuntime.FortSpecialRelevancyPawnAttachComponent"));
+                }
+            }
+            if (Index == 1) // Memories, BP_Buffet_PhaseScripting_Phase1_C
+            {
+                //EventPawn->TeleportTo(FVector(-963.630f, 25453.090f, 359392.125f), EventPawn->GetActorRotation());
 
-                    if (!ScriptActor)
-                    {
-                        ScriptActor = Cast<AActor>(GetEventScripting());
-                        LOG_INFO(LogEvent, "ScriptActor set for mutator: {}", CurrentSpecialEventMutator->GetName());
-                    }
+                auto Phase1Scripting = FindObject("/Buffet/Levels/Buffet_Part_3.Buffet_Part_3:PersistentLevel.BP_Buffet_PhaseScripting_Phase1_2");
+
+                auto TeleportRef = Phase1Scripting->Get<AActor*>(Phase1Scripting->GetOffset("TeleportRef"));
+
+                //EventPawn->TeleportTo(TeleportRef->GetActorLocation(), EventPawn->GetActorRotation());
+
+                for (int i = 0; i < ClientConnections.Num(); i++)
+                {
+                    auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
+
+                    //CurrentPawn->TeleportTo(TeleportRef->GetActorLocation(), CurrentPawn->GetActorRotation());
+
+                    //Globals::PawnTeleportRotDefault = CurrentPawn->GetActorRotation();
+
+                    CurrentPawn->ForceNetUpdate();
                 }
             }
             if (Index == 2) // Slide
             {
-                auto Script = FindObject<UObject>(L"/Buffet/Levels/Buffet_Part_4.Buffet_Part_4.PersistentLevel.BP_Buffet_PhaseScripting_Paint_4");
-                auto SplineActor = Script->Get<AActor*>(Script->GetOffset("SplineActor"));
-                auto PawnLocation = Script->Get<AActor*>(Script->GetOffset("PawnLocation")) = SplineActor;
+                auto Script = FindObject<UObject>("/Buffet/Levels/Buffet_Part_4.Buffet_Part_4.PersistentLevel.BP_Buffet_PhaseScripting_Paint_4");
 
-                auto AllWrapsSpawners = UGameplayStatics::GetAllActorsOfClass(GetWorld(), FindObject<UClass>(L"/Script/SpecialEventGameplayRuntime.FortSpecialRelevancyActorSpawner"));
+                Script->Get<bool>(Script->GetOffset("bRaceStarted")) = true;
+                Script->ProcessEvent(Script->FindFunction("OnRep_bRaceStarted"));
 
-                for (int i = 0; i < AllWrapsSpawners.Num(); i++)
-                {
-                    auto CurrentWrapSpawner = AllWrapsSpawners.At(i);
-
-                    if (CurrentWrapSpawner)
-                    {
-                        auto WrapSpawnerLocation = CurrentWrapSpawner->GetActorLocation();
-                        auto WrapSpawnerRotation = CurrentWrapSpawner->GetActorRotation();
-                        UClass* ClassToSpawn = nullptr;
-
-                        if (CurrentWrapSpawner->GetName().contains("WrapChangePickup"))
-                        {
-                            ClassToSpawn = FindObject<UClass>(L"/Buffet/Gameplay/Blueprints/WrapWorldPrototype/BP_Buffet_Paint_WrapChangePickup.BP_Buffet_Paint_WrapChangePickup_C");
-                        }
-                        else if (CurrentWrapSpawner->GetName().contains("Paint_Pickup"))
-                        {
-                            ClassToSpawn = FindObject<UClass>(L"/Buffet/Gameplay/Blueprints/WrapWorldPrototype/BP_Buffet_Paint_Pickup.BP_Buffet_Paint_Pickup_C");
-                        }
-                        auto SpawnedWrap = GetWorld()->SpawnActor<AActor>(ClassToSpawn, WrapSpawnerLocation, WrapSpawnerRotation.Quaternion(), FVector(1, 1, 1), 
-                            CreateSpawnParameters(ESpawnActorCollisionHandlingMethod::AlwaysSpawn, true, nullptr));
-
-                        if (SpawnedWrap)
-                        {
-                            LOG_INFO(LogDev, "Spawner Spawned a Wrap: {}", SpawnedWrap->GetName());
-                        }
-                        else
-                        {
-                            LOG_INFO(LogDev, "Spawner Failed to spawn a Wrap {}!", CurrentWrapSpawner->GetName());
-                        }
-                    }
-                    else
-                    {
-                        LOG_INFO(LogDev, "Spawner Invalid!");
-                    }
-                }
+                Script->ProcessEvent(Script->FindFunction("OnReady_4E0ADA484A9A29A99CA6DD97BE645F09"), &OnReadyParams);
 
                 for (int i = 0; i < ClientConnections.Num(); i++)
                 {
-                    auto CurrentController = ClientConnections.At(i)->GetPlayerController();
                     auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
+                    auto CurrentController = ClientConnections.At(i)->GetPlayerController();
 
-                    if (!CurrentPawn)
-                        continue;
-
-                    auto PlayerComponent = CurrentPawn->AddComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/WrapWorldPrototype/BP_Buffet_Paint_PlayerComponent.BP_Buffet_Paint_PlayerComponent_C")); // WHY DOESnT IT WORK AUTO
+                    auto PlayerComponent = CurrentPawn->AddComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/WrapWorldPrototype/BP_Buffet_Paint_PlayerComponent.BP_Buffet_Paint_PlayerComponent_C"));
+                    CurrentPawn->AddComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/WrapWorldPrototype/BP_Buffet_Paint_IntroTrackFinder.BP_Buffet_Paint_IntroTrackFinder_C"));
                     auto MovementComponent = CurrentPawn->AddComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/WrapWorldPrototype/BP_Buffet_Paint_MovementComponent.BP_Buffet_Paint_MovementComponent_C"));
-
-                    PlayerComponent->Get<AActor*>(PlayerComponent->GetOffset("OwningPlayerController")) = CurrentController;
-
-                    struct
-                    {
-                        AActor* Pawn;
-                        AActor* ReturnValue;
-                    }wrapmanagerparams{};
-                    wrapmanagerparams.Pawn = CurrentPawn;
-
-                    Script->ProcessEvent(Script->FindFunction("GetWrapManagerForPlayer"), &wrapmanagerparams);
-
-                    MovementComponent->Get<bool>(MovementComponent->GetOffset("bIsMovingAlongSpline")) = true;
-                    MovementComponent->Get<float>(MovementComponent->GetOffset("ReplicatedTotalSplineTime")) = 59.793846f; // TotalSplineTime
-                    MovementComponent->Get<AActor*>(MovementComponent->GetOffset("TargetSplineActor")) = SplineActor;
-                    MovementComponent->ProcessEvent(MovementComponent->FindFunction("SetSplineActor"), &SplineActor);
-                    bool IsMoving = true;
-                    MovementComponent->ProcessEvent(MovementComponent->FindFunction("SetIsMovingAlongSpline"), &IsMoving);
-                    MovementComponent->Get<float>(MovementComponent->GetOffset("ReplicatedSplineInterpStrength")) = 1.3f; // SplineInterpStrength
-                    auto GameMode = (AFortGameMode*)GetWorld()->GetGameMode();
-                    auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
-                    MovementComponent->Get<float>(MovementComponent->GetOffset("StartServerWorldTime")) = GameState->GetServerWorldTimeSeconds();
-
-                    MovementComponent->ProcessEvent(MovementComponent->FindFunction("OnRep_TargetSplineActor"));
-
-                    PlayerComponent->Get<AActor*>(PlayerComponent->GetOffset("WrapManager")) = wrapmanagerparams.ReturnValue;
 
                     PlayerComponent->Get<UObject*>(PlayerComponent->GetOffset("MovementComponent")) = MovementComponent;
 
-                    int StasisMode = 3;
-                    CurrentPawn->ProcessEvent(CurrentPawn->FindFunction("SetStasisMode"), &StasisMode); // ??
-                }
-            }
-            if (Index == 3)
-            {
-                for (int i = 0; i < ClientConnections.Num(); i++)
-                {
-                    auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
-                    auto CurrentController = ClientConnections.At(i)->GetPlayerController();
-                    int StasisMode = 0;
-
-                    CurrentPawn->ProcessEvent(CurrentPawn->FindFunction("SetStasisMode"), &StasisMode);
+                    PlayerComponent->ProcessEvent(PlayerComponent->FindFunction("InitializePaintComponent"));
+                    PlayerComponent->ProcessEvent(PlayerComponent->FindFunction("InitializeMovementComponent"));
                 }
             }
             if (Index == 4) // Storm King
@@ -350,82 +294,95 @@ void ActivatePhaseAtIndexHook(UObject* SpecialEventScript, int Index)
 
                 auto DefaultPlane = FindObject("/Buffet/Gameplay/Blueprints/WolfMother/BP_PlanePrototype.Default__BP_PlanePrototype_C");
 
-                auto WID = Cast<UFortWorldItemDefinition>(FindObject("WID_Buffet_BeatMatchingBoomBox", nullptr, ANY_PACKAGE)); // Storm King weapon thing
+                {
+                    auto WID = Cast<UFortWorldItemDefinition>(FindObject("WID_Buffet_BeatMatchingBoomBox", nullptr, ANY_PACKAGE)); // Storm King weapon thing
+
+                    for (int i = 0; i < ClientConnections.Num(); i++)
+                    {
+                        auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
+                        auto CurrentController = (AFortPlayerControllerAthena*)ClientConnections.At(i)->GetPlayerController();
+
+                        auto WorldInventory = CurrentController->GetWorldInventory();
+
+                        bool bShouldUpdate = false;
+                        WorldInventory->AddItem(WID, &bShouldUpdate, 1);
+
+                        if (bShouldUpdate)
+                            WorldInventory->Update();
+
+                        SendMessageToConsole(CurrentController, L"Gave WID_Buffet_BeatMatchingBoomBox!");
+                    }
+
+                    auto AllWeps = UGameplayStatics::GetAllActorsOfClass(GetWorld(), FindObject<UClass>("/Buffet/Gameplay/Blueprints/WolfMother/BeatmatchingWeapon/B_Buffet_BeatMatchingWeaponPrototype.B_Buffet_BeatMatchingWeaponPrototype_C"));
+
+                    for (int i = 0; i < AllWeps.Num(); i++)
+                    {
+                        auto CurrentWep = AllWeps.At(i);
+
+                        if (CurrentWep != nullptr)
+                        {
+                            CurrentWep->Get<AActor*>(CurrentWep->GetOffset("Phase4ScriptingRef")) = StormScript;
+                        }
+                    }
+                }
+            }
+            if (Index == 5) // Ariana Knocked
+            {
+                auto ReviveScripting = FindObject("/Buffet/Levels/Buffet_Reflect.Buffet_Reflect:PersistentLevel.BP_Buffet_PhaseScripting_Revive_2");
+
+                auto ManualTeleportLocation = ReviveScripting->Get<FVector>(ReviveScripting->GetOffset("ManualTeleportLocation"));
+
+                auto ManualTeleportRotation = ReviveScripting->Get<FRotator>(ReviveScripting->GetOffset("Manual_Teleport_Rotation"));
 
                 for (int i = 0; i < ClientConnections.Num(); i++)
                 {
                     auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
-                    auto CurrentController = (AFortPlayerControllerAthena*)ClientConnections.At(i)->GetPlayerController();
-
-                    auto WorldInventory = CurrentController->GetWorldInventory();
-
-                    bool bShouldUpdate = false;
-                    WorldInventory->AddItem(WID, &bShouldUpdate, 1);
-
-                    if (bShouldUpdate)
-                        WorldInventory->Update();
-
-                    SendMessageToConsole(CurrentController, L"Gave WID_Buffet_BeatMatchingBoomBox!");
-                }
-
-                auto AllWeps = UGameplayStatics::GetAllActorsOfClass(GetWorld(), FindObject<UClass>(L"/Buffet/Gameplay/Blueprints/WolfMother/BeatmatchingWeapon/B_Buffet_BeatMatchingWeaponPrototype.B_Buffet_BeatMatchingWeaponPrototype_C"));
-
-                for (int i = 0; i < AllWeps.Num(); i++)
-                {
-                    auto CurrentWep = AllWeps.At(i);
-
-                    if (CurrentWep != nullptr)
-                    {
-                        CurrentWep->Get<AActor*>(CurrentWep->GetOffset("Phase4ScriptingRef")) = StormScript;
-                    }
                 }
             }
             if (Index == 6) // Ariana
             {
-                auto ReflectScript = FindObject(L"/Buffet/Levels/Buffet_Reflect.Buffet_Reflect:PersistentLevel.BP_Buffet_PhaseScripting_Stars_2");
-
                 for (int i = 0; i < ClientConnections.Num(); i++)
                 {
                     auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
 
                     CurrentPawn->AddComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/Stars/BP_Buffet_Stars_PlayerComponent.BP_Buffet_Stars_PlayerComponent_C"));
+                }
+            }
+            if (Index == 7) // Ariana Dance
+            {
+                auto ReviveScripting = FindObject("/Buffet/Levels/Buffet_Reflect.Buffet_Reflect:PersistentLevel.BP_Buffet_PhaseScripting_Revive_2");
+
+                auto ReflectScripting = FindObject("/Buffet/Levels/Buffet_Reflect.Buffet_Reflect:PersistentLevel.BP_Buffet_PhaseScripting_Reflect_2");
+
+                auto ManualTeleportRotation = ReviveScripting->Get<FRotator>(ReviveScripting->GetOffset("Manual_Teleport_Rotation"));
+
+                for (int i = 0; i < ClientConnections.Num(); i++)
+                {
+                    auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
+
                     CurrentPawn->AddComponentByClass(FindObject<UClass>("/BuffetPlaylist/Playlist/BuffetCharacterMovementMutatorComponent.BuffetCharacterMovementMutatorComponent_C"));
                 }
             }
             if (Index == 8) // Bubbles
             {
-                //auto BubbleScript = FindObject("/Buffet/Levels/Buffet_Bubbles.Buffet_Bubbles:PersistentLevel.BP_Buffet_PhaseScripting_Bubble_4");
-                //auto BubbleSpline = FindObject("/Buffet/Levels/Buffet_Bubbles.Buffet_Bubbles:PersistentLevel.BP_Buffet_SmallBubblePath_2.Spline");
+                auto BubblesScripting = FindObject<UObject>("/Buffet/Levels/Buffet_Bubbles.Buffet_Bubbles:PersistentLevel.BP_Buffet_PhaseScripting_Bubble_4");
 
+                BubblesScripting->Get<bool>(BubblesScripting->GetOffset("bUsePlayerMovementMode")) = false;
+
+                BubblesScripting->Get<AActor*>(BubblesScripting->GetOffset("FollowActor")) = FindObject<AActor>("/Buffet/Levels/Buffet_Bubbles.Buffet_Bubbles:PersistentLevel.BP_Buffet_BubbleFollowActor_2");
+            }
+            if (Index == 9) // Clouds
+            {
                 for (int i = 0; i < ClientConnections.Num(); i++)
                 {
                     auto CurrentPawn = ClientConnections.At(i)->GetPlayerController()->GetPawn();
-                    auto ComptoRemove = CurrentPawn->GetComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/Stars/BP_Buffet_Stars_PlayerComponent.BP_Buffet_Stars_PlayerComponent_C"));
 
-                    auto BubbleMovementComponent = CurrentPawn->AddComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/Bubble/BP_BubblePlayerMovementComponent.BP_BubblePlayerMovementComponent_C"));
+                    auto RemoveComponent = CurrentPawn->GetComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/Stars/BP_Buffet_Stars_PlayerComponent.BP_Buffet_Stars_PlayerComponent_C"));
 
-                    /*
-                    struct
-                    {
-                        UObject* InSplineComponent;
-                        float StartDistance;
+                    CurrentPawn->ProcessEvent(CurrentPawn->FindFunction("K2_DestroyComponent"), RemoveComponent);
 
-                    }SetSplineComponent;
-                    SetSplineComponent.StartDistance = 0;
-                    SetSplineComponent.InSplineComponent = BubbleSpline;
-
-                    // Works but too fast and player not in correct place on the spline.
-                    BubbleMovementComponent->ProcessEvent(BubbleMovementComponent->FindFunction("SetSplineComponent"), &SetSplineComponent);
-                    BubbleMovementComponent->Get<UObject*>(BubbleMovementComponent->GetOffset("SplineComponent")) = BubbleSpline;
-                    BubbleMovementComponent->Get<bool>(BubbleMovementComponent->GetOffset("bIsMovingAlongSpline")) = true;
-                    auto GameMode = (AFortGameMode*)GetWorld()->GetGameMode();
-                    auto GameState = Cast<AFortGameStateAthena>(GameMode->GetGameState());
-                    BubbleMovementComponent->Get<float>(BubbleMovementComponent->GetOffset("StartServerWorldTime")) = GameState->GetServerWorldTimeSeconds();
-                    bool IsMoving = true;
-                    BubbleMovementComponent->ProcessEvent(BubbleMovementComponent->FindFunction("SetIsMovingAlongSpline"), &IsMoving);
-                    */
-
-                    CurrentPawn->ProcessEvent(CurrentPawn->FindFunction("K2_DestroyComponent"), &ComptoRemove);
+                    CurrentPawn->AddComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/Llama/BP_Buffet_Llama_PlayerComponent.BP_Buffet_Llama_PlayerComponent_C"));
+                    CurrentPawn->AddComponentByClass(FindObject<UClass>("/Buffet/Gameplay/Blueprints/PostEvent/LlamaSpeedControlComponent.LlamaSpeedControlComponent_C"));
                 }
             }
             if (Index == 10) // Escher
@@ -496,7 +453,7 @@ void AttemptFinishPhaseHook(AActor* SpecialEventScript, FGameplayTag PhaseTag)
 
     static auto OnRep_ReplicatedActivePhaseIndexFn = FindObject<UFunction>("/Script/SpecialEventGameplayRuntime.SpecialEventScript.OnRep_ReplicatedActivePhaseIndex");
 
-    auto& Connections = GetWorld()->GetNetDriver()->GetClientConnections();
+    auto Connections = GetWorld()->GetNetDriver()->GetClientConnections();
 
     if (LastTag == "Kiwi.Phase.Islands") // PrisonBlocks (Event Start)
     {
@@ -551,72 +508,6 @@ void TeleportPlayerPawnHook(UObject* Context, FFrame& Stack, void* Ret)
     PlayerPawn->TeleportTo(DestLocation, DestRotation);
 
     return TeleportPlayerPawnOriginal(Context, Stack, Ret);
-}
-
-/*
-
-// Storm King Spawning, I might put this in its own class soon.
-bool bStormKingSpawned = false;
-static inline void (*DADBroOnGamephaseStepChangedOriginal)(UObject* Context, FFrame& Stack, void* Ret);
-void DADBroOnGamephaseStepChangedHook(UObject* Context, FFrame& Stack, void* Ret)
-{
-    auto GameState = Cast<AFortGameStateAthena>(GetWorld()->GetGameState());
-
-    if (!GameState)
-        return DADBroOnGamephaseStepChangedOriginal(Context, Stack, Ret);
-
-    FRotator Rotation;
-    Context->ProcessEvent(Context->FindFunction("GetDesiredDadBroRotation"), &Rotation);
-
-    if (GameState->GetGamePhaseStep() == EAthenaGamePhaseStep::StormShrinking && bStormKingSpawned == false)
-    {
-        auto StormKing = GetWorld()->SpawnActor<AActor>(FindObject<UClass>("/Game/Athena/DADBRO/DADBRO_Pawn.DADBRO_Pawn_C"), FVector{ 5150.0f, 4900.0f, -100.0f }, Rotation.Quaternion(), FVector{ 1,1,1 }, CreateSpawnParameters(ESpawnActorCollisionHandlingMethod::AlwaysSpawn));
-
-        if (StormKing)
-        {
-            bStormKingSpawned = true;
-            Context->Get<AActor*>(Context->GetOffset("DadBroPawn")) = StormKing;
-            Context->ProcessEvent(Context->FindFunction("OnRep_DadBroPawn"));
-        }
-        else
-        {
-            LOG_INFO(LogDev, "Failed to spawn StormKing!");
-        }
-    }
-
-    return DADBroOnGamephaseStepChangedOriginal(Context, Stack, Ret);
-}
-*/
-
-static void (*StartEventAtIndexOriginal)(UObject* Context, FFrame& Stack, void* Ret);
-void StartEventAtIndexHook(UObject* Context, FFrame& Stack, void* Ret)
-{
-    int32 InStartingIndex;
-    Stack.StepCompiledIn(&InStartingIndex);
-
-    if (Fortnite_Version == 17.50)
-    {
-        auto Scripting = FindObject<UObject>("/Kiwi/Levels/Kiwi_P.Kiwi_P:PersistentLevel.BP_Kiwi_Master_Scripting_2");
-        auto EventPlaylist = GetEventPlaylist();
-
-        struct { UObject* GameState; UObject* Playlist; FGameplayTagContainer PlaylistContextTags; } OnReadyParams{ Cast<AFortGameStateAthena>(GetWorld()->GetGameState()), EventPlaylist };
-        if (EventPlaylist)
-        {
-            static auto GameplayTagContainerOffset = EventPlaylist->GetOffset("GameplayTagContainer");
-            OnReadyParams.PlaylistContextTags = EventPlaylist->Get<FGameplayTagContainer>(GameplayTagContainerOffset);
-        }
-        else
-        {
-            OnReadyParams.PlaylistContextTags = FGameplayTagContainer();
-        }
-
-        Scripting->ProcessEvent(Scripting->FindFunction("OnReady_F1A32853487CB7603278E6847A5F2625"), &OnReadyParams);
-        Context->ProcessEvent(Context->FindFunction("LoadKiwiAssets"), &OnReadyParams);
-        Context->ProcessEvent(Context->FindFunction("BP_OnScriptReady"), &OnReadyParams);
-        Scripting->ProcessEvent(Scripting->FindFunction("startevent"), &InStartingIndex);
-    }
-
-    return StartEventAtIndexOriginal(Context, Stack, Ret);
 }
 
 static __int64 (*FlowStep_SetPhaseToActiveOriginal)(AActor* SpecialEventPhase);
@@ -771,7 +662,7 @@ DWORD WINAPI Main(LPVOID)
         return 1;
     }
 
-    LOG_INFO(LogInit, "Initializing Project Skid");
+    LOG_INFO(LogInit, "Initializing Project Reboot!");
 
     Addresses::SetupVersion();
 
@@ -785,14 +676,13 @@ DWORD WINAPI Main(LPVOID)
     Addresses::Init();
     Addresses::Print();
 
-    //Milxnor is smart and confused me
-    if (Globals::TurnOnRebootingfr)
-    {
-        bEnableRebooting = Addresses::RebootingDelegate && Addresses::FinishResurrection && Addresses::GetSquadIdForCurrentPlayer;
-    }
-    else if (!Globals::TurnOnRebootingfr)
+    if (!Globals::bEnableRebootingFRFR)
     {
         bEnableRebooting = Addresses::RebootingDelegate && Addresses::FinishResurrection && Addresses::GetSquadIdForCurrentPlayer && false;
+    }
+    else if (Globals::bEnableRebootingFRFR)
+    {
+        bEnableRebooting = Addresses::RebootingDelegate && Addresses::FinishResurrection && Addresses::GetSquadIdForCurrentPlayer;
     }
 
     LOG_INFO(LogDev, "Fortnite_CL: {}", Fortnite_CL);
@@ -808,7 +698,7 @@ DWORD WINAPI Main(LPVOID)
 #else
     if (Fortnite_Version > 20)
     {
-        MessageBoxA(0, "Please define ABOVE_S20", "Project Reboot 3.0", MB_ICONERROR);
+        MessageBoxA(0, "Please define ABOVE_S20", "SIGMA SIGMA SIGMA SIGMA", MB_ICONERROR);
         return 0;
     }
 #endif
@@ -890,12 +780,41 @@ DWORD WINAPI Main(LPVOID)
     }
 
 
-    
+    /*
+    if (Fortnite_Version == 6.21) // ur trolling
+    {
+        std::string AIDirectorFuncName = "/Script/Engine.PlayerController.FOV"; // "/Script/Engine.PlayerController.ClientVoiceHandshakeComplete";
+        std::string GoalManagerFuncName = "/Script/Engine.PlayerController.EnableCheats";
+
+        Hooking::MinHook::Hook((PVOID)(__int64(GetModuleHandleW(0)) + 0xAADD50), (PVOID)ConstructEmptyQueryInfoHook, (PVOID*)&ConstructEmptyQueryInfoOriginal); // 7FF7E556D158  
+
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xB10480, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xABBAB9, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xB1E2BC, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xB25EAA, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xABFDC1, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xAEC76D, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xA9C62C, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xAA1165, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xA9F5C0, (PVOID)GetGoalManagerHook, GoalManagerFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0x10975EE, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xAC1C15, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xB2096E, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0x107B6A5, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xB213DC, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xAB51D2, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xB21BB8, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xABE6AC, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0xB2247D, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0x10988B7, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0x107C7B6, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0x1096D21, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+        HookInstruction(__int64(GetModuleHandleW(0)) + 0x1097982, (PVOID)GetAIDirectorHook, AIDirectorFuncName, ERelativeOffsets::CALL, FortPlayerControllerAthenaDefault);
+    }
+    */
 
     if (Fortnite_Version == 17.30) // Rift Tour stuff
     {
-        auto busCrash = Hooking::MinHook::Hook(Memcury::Scanner::FindPattern("48 89 5C 24 ? 48 89 6C 24 ? 56 57 41 54 41 56 41 57 48 83 EC 40 48 8B 59 28 45 33 E4").GetAs<PVOID>(), (PVOID)EmptyHook);
-
         Hooking::MinHook::Hook((PVOID)(__int64(GetModuleHandleW(0)) + 0x3E07910), (PVOID)GetMeshNetworkNodeTypeHook, nullptr);
         Hooking::MinHook::Hook((PVOID)(__int64(GetModuleHandleW(0)) + 0x3DED158), (PVOID)ReturnTrueHook, nullptr); // 7FF7E556D158  
         Hooking::MinHook::Hook((PVOID)(__int64(GetModuleHandleW(0)) + 0x3DECFC8), (PVOID)ReturnTrueHook, nullptr); // 7FF7E556CFC8
@@ -929,12 +848,6 @@ DWORD WINAPI Main(LPVOID)
         {
             Hooking::MinHook::Hook(FindObject<UObject>("/Script/FortniteGame.Default__FortMissionLibrary"), FindObject<UFunction>(L"/Script/FortniteGame.FortMissionLibrary:TeleportPlayerPawn"), TeleportPlayerPawnHook,
                 (PVOID*)&TeleportPlayerPawnOriginal, false, true);
-            // Todo hook UBuffetRacePlayerMovementComponent::ServerTeleportPlayer?
-        }
-        if (Fortnite_Version == 17.50)
-        {
-            Hooking::MinHook::Hook(FindObject<UObject>("/Script/SpecialEventGameplayRuntime.Default__SpecialEventScript"), FindObject<UFunction>(L"/Script/SpecialEventGameplayRuntime.SpecialEventScript:StartEventAtIndex"), StartEventAtIndexHook,
-                (PVOID*)&StartEventAtIndexOriginal, false, true);
         }
     }
 
@@ -1060,17 +973,10 @@ DWORD WINAPI Main(LPVOID)
 
     Hooking::MinHook::Hook(GameModeDefault, FindObject<UFunction>(L"/Script/Engine.GameMode.ReadyToStartMatch"), AFortGameModeAthena::Athena_ReadyToStartMatchHook,
        (PVOID*)&AFortGameModeAthena::Athena_ReadyToStartMatchOriginal, false, false, true);
-
-    if (Fortnite_Version > 3.3) // 0xE9 on 3.3 (assumed every build below)
-    {
-        Hooking::MinHook::Hook(GameModeDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortGameModeAthena.OnAircraftEnteredDropZone"), AFortGameModeAthena::OnAircraftEnteredDropZoneHook,
-            (PVOID*)&AFortGameModeAthena::OnAircraftEnteredDropZoneOriginal, false, false, true, true);
-    }
-
+    Hooking::MinHook::Hook(GameModeDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortGameModeAthena.OnAircraftEnteredDropZone"), AFortGameModeAthena::OnAircraftEnteredDropZoneHook,
+        (PVOID*)&AFortGameModeAthena::OnAircraftEnteredDropZoneOriginal, false, false, true, true);
     Hooking::MinHook::Hook(GameModeDefault, FindObject<UFunction>(L"/Script/Engine.GameModeBase.SpawnDefaultPawnFor"),
         AGameModeBase::SpawnDefaultPawnForHook, nullptr, false);
-    // Hooking::MinHook::Hook(GameModeDefault, FindObject<UFunction>(L"/Script/Engine.GameModeBase.PlayerCanRestart"),
-       // AGameModeBase::PlayerCanRestartHook, (PVOID*)&AGameModeBase::PlayerCanRestartOriginal, false, true);
     Hooking::MinHook::Hook(GameModeDefault, FindObject<UFunction>(L"/Script/Engine.GameModeBase.HandleStartingNewPlayer"), AFortGameModeAthena::Athena_HandleStartingNewPlayerHook,
         (PVOID*)&AFortGameModeAthena::Athena_HandleStartingNewPlayerOriginal, false);
 
@@ -1187,12 +1093,8 @@ DWORD WINAPI Main(LPVOID)
         AFortPlayerController::ServerLoadingScreenDroppedHook, (PVOID*)&AFortPlayerController::ServerLoadingScreenDroppedOriginal, false, true);
     Hooking::MinHook::Hook(FortPlayerControllerAthenaDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerController.ServerReadyToStartMatch"),
         AFortPlayerControllerAthena::ServerReadyToStartMatchHook, (PVOID*)&AFortPlayerControllerAthena::ServerReadyToStartMatchOriginal, false);
-
-    auto ServerRequestSeatChangeFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerZone.ServerRequestSeatChange");
-
-    if (ServerRequestSeatChangeFn)
-        Hooking::MinHook::Hook(FortPlayerControllerAthenaDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerZone.ServerRequestSeatChange"),
-            AFortPlayerControllerAthena::ServerRequestSeatChangeHook, (PVOID*)&AFortPlayerControllerAthena::ServerRequestSeatChangeOriginal, false);
+    Hooking::MinHook::Hook(FortPlayerControllerAthenaDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerZone.ServerRequestSeatChange"),
+        AFortPlayerControllerAthena::ServerRequestSeatChangeHook, (PVOID*)&AFortPlayerControllerAthena::ServerRequestSeatChangeOriginal, false);
 
     // if (false)
     if (Fortnite_Version > 6.10) // so on 6.10 there isa param and our little finder dont work for that so
@@ -1221,25 +1123,14 @@ DWORD WINAPI Main(LPVOID)
     Hooking::MinHook::Hook(FortPlayerControllerAthenaDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ServerGiveCreativeItem"),
         AFortPlayerControllerAthena::ServerGiveCreativeItemHook, nullptr, true);
 
-    static auto ServerCreativeSetFlightSpeedIndexFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerGameplay.ServerCreativeSetFlightSpeedIndex");
-
-    if (ServerCreativeSetFlightSpeedIndexFn)
-        Hooking::MinHook::Hook(FindObject<UObject>("/Script/FortniteGame.Default__FortPlayerControllerGameplay"), ServerCreativeSetFlightSpeedIndexFn,
-            AFortPlayerControllerAthena::ServerCreativeSetFlightSpeedIndexHook, nullptr, false, true);
-
     if (Fortnite_Version < 19) // its all screwed up idk
     {
         Hooking::MinHook::Hook(FortPlayerControllerAthenaDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ServerPlaySquadQuickChatMessage"),
             AFortPlayerControllerAthena::ServerPlaySquadQuickChatMessageHook, nullptr, false);
     }
 
-    auto ServerTeleportToPlaygroundIslandFn = FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ServerTeleportToPlaygroundLobbyIsland");
-
-    if (ServerTeleportToPlaygroundIslandFn)
-    {
-        Hooking::MinHook::Hook(FortPlayerControllerAthenaDefault, ServerTeleportToPlaygroundIslandFn,
-            AFortPlayerControllerAthena::ServerTeleportToPlaygroundLobbyIslandHook, nullptr, false);
-    }
+    Hooking::MinHook::Hook(FortPlayerControllerAthenaDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerControllerAthena.ServerTeleportToPlaygroundLobbyIsland"),
+        AFortPlayerControllerAthena::ServerTeleportToPlaygroundLobbyIslandHook, nullptr, false);
 
     // Hooking::MinHook::Hook(FortPlayerStateAthenaDefault, FindObject<UFunction>(L"/Script/FortniteGame.FortPlayerStateAthena.ServerSetInAircraft"),
         // AFortPlayerStateAthena::ServerSetInAircraftHook, (PVOID*)&AFortPlayerStateAthena::ServerSetInAircraftOriginal, false, true); // We could use second method but eh
@@ -1498,17 +1389,15 @@ DWORD WINAPI Main(LPVOID)
     Hooking::MinHook::Hook((PVOID)Addresses::ProcessEvent, ProcessEventHook, (PVOID*)&UObject::ProcessEventOriginal);
 #endif
 
-    AddVehicleHook();
+    //AddVehicleHook();
 
     auto ClientOnPawnDiedCallAddr = FindFunctionCall(L"ClientOnPawnDied", Engine_Version == 416 ? std::vector<uint8_t>{ 0x48, 0x89, 0x54 } : std::vector<uint8_t>{ 0x48, 0x89, 0x5C });
     LOG_INFO(LogDev, "ClientOnPawnDiedCallAddr: 0x{:x}", ClientOnPawnDiedCallAddr - __int64(GetModuleHandleW(0)));
     Hooking::MinHook::Hook((PVOID)ClientOnPawnDiedCallAddr, AFortPlayerController::ClientOnPawnDiedHook, (PVOID*)&AFortPlayerController::ClientOnPawnDiedOriginal);
 
-#if 0
     auto OnSafeZoneStateChangeAddr = FindFunctionCall(L"OnSafeZoneStateChange", Engine_Version == 416 ? std::vector<uint8_t>{ 0x48, 0x89, 0x54 } : std::vector<uint8_t>{ 0x48, 0x89, 0x5C });
     LOG_INFO(LogDev, "OnSafeZoneStateChangeAddr: 0x{:x}", OnSafeZoneStateChangeAddr - __int64(GetModuleHandleW(0)));
     Hooking::MinHook::Hook((PVOID)OnSafeZoneStateChangeAddr, AFortSafeZoneIndicator::OnSafeZoneStateChangeHook, (PVOID*)&AFortSafeZoneIndicator::OnSafeZoneStateChangeOriginal);
-#endif
 
     LOG_INFO(LogDev, "PredictionKeySize: 0x{:x} {}", PredictionKeySize, PredictionKeySize);
 
@@ -1547,7 +1436,7 @@ DWORD WINAPI Main(LPVOID)
 
     srand(time(0));
 
-    LOG_INFO(LogHook, "Finished initialization!");
+    LOG_INFO(LogHook, "Finished!");
 
     if (false)
     {

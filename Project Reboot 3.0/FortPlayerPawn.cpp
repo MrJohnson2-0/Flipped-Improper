@@ -246,13 +246,12 @@ void AFortPlayerPawn::UnEquipVehicleWeaponDefinition(UFortWeaponItemDefinition* 
 	if (bShouldUpdate)
 		WorldInventory->Update();
 
-	auto LastItemInstance = WorldInventory->GetPickaxeInstance(); // Bad, we should get the last item.
+	auto PickaxeInstance = WorldInventory->GetPickaxeInstance();
 
-	if (!LastItemInstance)
+	if (!PickaxeInstance)
 		return;
 
-	PlayerController->ServerExecuteInventoryItemHook(PlayerController, LastItemInstance->GetItemEntry()->GetItemGuid());
-	PlayerController->ClientEquipItem(LastItemInstance->GetItemEntry()->GetItemGuid(), true);
+	AFortPlayerController::ServerExecuteInventoryItemHook(PlayerController, PickaxeInstance->GetItemEntry()->GetItemGuid()); // Bad, we should equip the last weapon.
 }
 
 void AFortPlayerPawn::StartGhostModeExitHook(UObject* Context, FFrame* Stack, void* Ret)
@@ -287,9 +286,8 @@ void AFortPlayerPawn::StartGhostModeExitHook(UObject* Context, FFrame* Stack, vo
 
 AActor* AFortPlayerPawn::ServerOnExitVehicleHook(AFortPlayerPawn* PlayerPawn, ETryExitVehicleBehavior ExitForceBehavior)
 {
-	auto Vehicle = PlayerPawn->GetVehicle();
-	auto VehicleWeaponDefinition = PlayerPawn->GetVehicleWeaponDefinition(Vehicle);
-	LOG_INFO(LogDev, "[Leave] {} VehicleWeaponDefinition: {}", __int64(Vehicle), VehicleWeaponDefinition ? VehicleWeaponDefinition->GetFullName() : "BadRead");
+	auto VehicleWeaponDefinition = PlayerPawn->GetVehicleWeaponDefinition(PlayerPawn->GetVehicle());
+	LOG_INFO(LogDev, "VehicleWeaponDefinition: {}", VehicleWeaponDefinition ? VehicleWeaponDefinition->GetFullName() : "BadRead");
 	PlayerPawn->UnEquipVehicleWeaponDefinition(VehicleWeaponDefinition);
 
 	return ServerOnExitVehicleOriginal(PlayerPawn, ExitForceBehavior);

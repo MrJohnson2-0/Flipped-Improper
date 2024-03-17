@@ -18,6 +18,28 @@
 	FAILED_LISTEN = 3
 }; */
 
+enum class EFortPickupSourceTypeFlag2 : uint8_t
+{
+	Other = 0,
+	Player = 1,
+	Destruction = 2,
+	Container = 3,
+	AI = 4,
+	Tossed = 5,
+	FloorLoot = 6,
+	EFortPickupSourceTypeFlag_MAX = 7
+};
+
+enum class EFortPickupSpawnSource2 : uint8_t
+{
+	Unset = 0,
+	PlayerElimination = 1,
+	Chest = 2,
+	SupplyDrop = 3,
+	AmmoBox = 4,
+	EFortPickupSpawnSource_MAX = 5
+};
+
 extern inline UObject* (*StaticLoadObjectOriginal)(UClass*, UObject*, const wchar_t* InName, const wchar_t* Filename, uint32_t LoadFlags, UObject* Sandbox, bool bAllowObjectReconciliation) = nullptr;
 
 template <typename T = UObject>
@@ -46,6 +68,101 @@ static inline T* LoadObject(const TCHAR* Name, UClass* Class = T::StaticClass(),
 
 	return Object;
 }
+
+struct DRotator // lmao
+{
+	double Pitch;
+	double Yaw;
+	double Roll;
+};
+
+struct BothRotator
+{
+	FRotator fR = FRotator();
+	DRotator dR = DRotator();
+
+	BothRotator(float X, float Y, float Z)
+	{
+		fR = FRotator(X, Y, Z);
+	}
+
+	BothRotator(FRotator rot)
+	{
+		fR = rot;
+	}
+
+	BothRotator(DRotator rot)
+	{
+		dR = rot;
+	}
+
+	BothRotator(double X, double Y, double Z)
+	{
+		dR = DRotator(X, Y, Z);
+	}
+
+	BothRotator() {}
+};
+
+struct DVector // lmao
+{
+	double X;
+	double Y;
+	double Z;
+
+	DVector operator*(const double A)
+	{
+		return DVector{ this->X * A, this->Y * A, this->Z * A };
+	}
+
+	DVector operator+(const DVector& A)
+	{
+		return DVector{ this->X + A.X, this->Y + A.Y, this->Z + A.Z };
+	}
+};
+
+struct BothVector
+{
+	FVector fV;
+	DVector dV;
+
+	BothVector(float X, float Y, float Z)
+	{
+		fV = FVector(X, Y, Z);
+	}
+
+	BothVector(FVector vec)
+	{
+		fV = vec;
+	}
+
+	BothVector(DVector vec)
+	{
+		dV = vec;
+	}
+
+	BothVector(double X, double Y, double Z)
+	{
+		dV = DVector(X, Y, Z);
+	}
+
+	BothVector() {}
+
+	BothVector operator+(const BothVector& otherVec)
+	{
+		return Fortnite_Version < 20 ? BothVector(fV.X + otherVec.fV.X, fV.Y + otherVec.fV.Y, fV.Z + otherVec.fV.Z) :
+			BothVector(dV.X + otherVec.dV.X, dV.Y + otherVec.dV.Y, dV.Z + otherVec.dV.Z);
+	}
+};
+
+namespace SkibidiToilet {
+	UObject* GetPlayerStateFromController(UObject* Controller);
+	UObject* GetCurrentWeapon(UObject* Pawn);
+	UObject* GetPawnFromController(UObject* Controller);
+	BothVector GetActorLocationDynamic(UObject* Actor);
+}
+
+
 
 template <typename T = UObject>
 static inline T* LoadObject(const std::string& NameStr, UClass* Class = nullptr, UObject* Outer = nullptr)
@@ -122,8 +239,8 @@ static inline UObject* GetLocalPlayerController()
 	return LocalPlayer->Get(PlayerControllerOffset);
 }
 
-template <typename T, bool bCheckType = true>
-static __forceinline T* Cast(UObject* Object)
+template <typename T>
+static __forceinline T* Cast(UObject* Object, bool bCheckType = true)
 {
 	if (bCheckType)
 	{

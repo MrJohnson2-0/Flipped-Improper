@@ -94,7 +94,7 @@ class AFortPlayerController : public APlayerController
 public:
 	static inline void (*ClientOnPawnDiedOriginal)(AFortPlayerController* PlayerController, void* DeathReport);
 	static inline void (*ServerCreateBuildingActorOriginal)(UObject* Context, FFrame* Stack, void* Ret);
-	static inline void (*ServerAttemptInteractOriginal)(UObject* Context, FFrame* Stack);
+	static inline void (*ServerAttemptInteractOriginal)(UObject* Context, FFrame* Stack, void* Ret);
 	static inline void (*ServerEditBuildingActorOriginal)(UObject* Context, FFrame& Stack, void* Ret);
 	static inline void (*DropSpecificItemOriginal)(UObject* Context, FFrame& Stack, void* Ret);
 	static inline AActor* (*SpawnToyInstanceOriginal)(UObject* Context, FFrame* Stack, AActor** Ret);
@@ -131,10 +131,6 @@ public:
 	FFortAthenaLoadout* GetCosmeticLoadout()
 	{
 		static auto CosmeticLoadoutPCOffset = GetCosmeticLoadoutOffset();
-
-		if (CosmeticLoadoutPCOffset == -1)
-			return nullptr;
-
 		auto CosmeticLoadout = this->GetPtr<FFortAthenaLoadout>(CosmeticLoadoutPCOffset);
 
 		return CosmeticLoadout;
@@ -147,7 +143,7 @@ public:
 	
 		static auto WeaponDefinitionOffset = FindOffsetStruct("/Script/FortniteGame.AthenaPickaxeItemDefinition", "WeaponDefinition");
 
-		auto PickaxeDefinition = /* WeaponDefinitionOffset != -1 && */ CosmeticLoadoutPickaxe ? CosmeticLoadoutPickaxe->Get<UFortItemDefinition*>(WeaponDefinitionOffset)
+		auto PickaxeDefinition = CosmeticLoadoutPickaxe ? CosmeticLoadoutPickaxe->Get<UFortItemDefinition*>(WeaponDefinitionOffset)
 			: FindObject<UFortItemDefinition>(L"/Game/Athena/Items/Weapons/WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
 
 		auto WorldInventory = GetWorldInventory();
@@ -160,6 +156,7 @@ public:
 
 		return NewAndModifiedInstances.first.size() > 0 ? NewAndModifiedInstances.first[0] : nullptr;
 	}
+	
 
 	TSet<FGuid>& GetGadgetTrackedAttributeItemInstanceIds() // actually in zone
 	{
@@ -198,7 +195,7 @@ public:
 	static void ServerLoadingScreenDroppedHook(UObject* Context, FFrame* Stack, void* Ret);
 	static void ServerRepairBuildingActorHook(AFortPlayerController* PlayerController, ABuildingSMActor* BuildingActorToRepair);
 	static void ServerExecuteInventoryItemHook(AFortPlayerController* PlayerController, FGuid ItemGuid);
-	static void ServerAttemptInteractHook(UObject* Context, FFrame* Stack);
+	static void ServerAttemptInteractHook(UObject* Context, FFrame* Stack, void* Ret);
 
 	static void ServerAttemptAircraftJumpHook(AFortPlayerController* PC, FRotator ClientRotation);
 	// static void ServerCreateBuildingActorHook(AFortPlayerController* PlayerController, FCreateBuildingActorData CreateBuildingData);

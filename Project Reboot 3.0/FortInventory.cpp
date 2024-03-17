@@ -28,6 +28,15 @@ std::pair<std::vector<UFortItem*>, std::vector<UFortItem*>> AFortInventory::AddI
 
 	auto ItemDefinition = ItemEntry->GetItemDefinition();
 
+	std::string TrapID = "TID_Floor_BouncePad_Athena_R_T01";
+	auto WID = Cast<UFortWorldItemDefinition>(FindObject(TrapID, nullptr, ANY_PACKAGE));
+
+	auto DecoItemDefinition = Cast<UFortDecoItemDefinition>(ItemDefinition);
+
+	
+
+	
+		
 	auto WorldItemDefinition = Cast<UFortWorldItemDefinition>(ItemDefinition);
 	auto& Count = ItemEntry->GetCount();
 
@@ -231,11 +240,14 @@ std::pair<std::vector<UFortItem*>, std::vector<UFortItem*>> AFortInventory::AddI
 {
 	if (LoadedAmmo == -1)
 	{
-		if (auto WeaponDef = Cast<UFortWeaponItemDefinition>(ItemDefinition)) // bPreventDefaultPreload ?
+		if (auto WeaponDef = Cast<UFortWeaponItemDefinition>(ItemDefinition))
+			
 			LoadedAmmo = WeaponDef->GetClipSize();
 		else
 			LoadedAmmo = 0;
 	}
+
+	
 
 	auto ItemEntry = FFortItemEntry::MakeItemEntry(ItemDefinition, Count, LoadedAmmo);
 	auto Ret = AddItem(ItemEntry, bShouldUpdate, bShowItemToast);

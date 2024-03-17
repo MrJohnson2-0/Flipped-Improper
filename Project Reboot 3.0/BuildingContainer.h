@@ -26,17 +26,9 @@ public:
 		return this->ReadBitfieldValue(bAlreadySearchedOffset, bAlreadySearchedFieldMask);
 	}
 
-	FVector/*&*/ GetLootSpawnLocation_Athena()
+	FVector& GetLootSpawnLocation_Athena()
 	{
-		static auto LootSpawnLocation_AthenaOffset = this->GetOffset("LootSpawnLocation_Athena", false);
-
-		if (LootSpawnLocation_AthenaOffset == -1)
-		{
-			static auto LootSpawnLocationOffset = this->GetOffset("LootSpawnLocation", false);
-			// return this->Get<FVector>(LootSpawnLocationOffset);
-			return FVector();
-		}
-
+		static auto LootSpawnLocation_AthenaOffset = this->GetOffset("LootSpawnLocation_Athena");
 		return this->Get<FVector>(LootSpawnLocation_AthenaOffset);
 	}
 

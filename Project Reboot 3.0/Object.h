@@ -58,6 +58,8 @@ public:
 	UObject* GetOuter() const { return OuterPrivate; }
 	FName GetFName() const { return NamePrivate; }
 
+	
+
 	class UPackage* GetOutermost() const;
 	bool IsA(class UStruct* Other);
 	class UFunction* FindFunction(const std::string& ShortFunctionName);
@@ -68,7 +70,7 @@ public:
 	int GetOffset(const std::string& ChildName, bool bWarnIfNotFound = true) const;
 
 	template <typename T = UObject*>
-	inline T& Get(int Offset) const { return *(T*)(__int64(this) + Offset); }
+	T& Get(int Offset) const { return *(T*)(__int64(this) + Offset); }
 
 	void* GetInterfaceAddress(UClass* InterfaceClass);
 

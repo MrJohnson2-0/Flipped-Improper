@@ -7,7 +7,6 @@ class AController : public AActor
 public:
 	AActor* GetViewTarget();
 	void Possess(class APawn* Pawn);
-	void UnPossess();
 
 	FName& GetStateName()
 	{
